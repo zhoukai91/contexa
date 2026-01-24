@@ -15,6 +15,7 @@
 
 # production
 /build
+/TMS原型文档
 
 # misc
 .DS_Store

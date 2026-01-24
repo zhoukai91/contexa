@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProjectGlossaryClient } from './project-glossary-client';
 
 export default async function ProjectGlossaryPage({
   params
@@ -22,14 +22,7 @@ export default async function ProjectGlossaryPage({
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('placeholderTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          {t('placeholderDesc')}
-        </CardContent>
-      </Card>
+      <ProjectGlossaryClient projectId={id} />
     </div>
   );
 }

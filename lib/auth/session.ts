@@ -51,9 +51,10 @@ export async function setSession(user: { id: number }) {
   };
   const encryptedSession = await signToken(session);
   (await cookies()).set('session', encryptedSession, {
+    path: '/',
     expires: expiresInOneDay,
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
   });
   return session;

@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProjectWorkbenchClient } from './project-workbench-client';
 
 export default async function ProjectWorkbenchPage({
   params
@@ -22,14 +22,7 @@ export default async function ProjectWorkbenchPage({
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('placeholderTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          {t('placeholderDesc')}
-        </CardContent>
-      </Card>
+      <ProjectWorkbenchClient projectId={id} />
     </div>
   );
 }
