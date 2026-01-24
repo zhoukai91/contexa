@@ -43,28 +43,30 @@ export default async function ProjectSettingsLocalesPage({
         <CardHeader>
           <CardTitle className="text-base">{t('listTitle')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-gray-700">
+        <CardContent className="space-y-3 text-sm">
           <div>
-            <div className="text-gray-600">{t('sourceLocale')}</div>
-            <div className="mt-1">{project.sourceLocale}</div>
+            <div className="text-muted-foreground">{t('sourceLocale')}</div>
+            <div className="mt-1 text-foreground">{project.sourceLocale}</div>
           </div>
           <div>
-            <div className="text-gray-600">{t('targetLocales')}</div>
+            <div className="text-muted-foreground">{t('targetLocales')}</div>
             {targetLocales.length === 0 ? (
-              <div className="mt-1 text-gray-500">{t('noTargetLocales')}</div>
+              <div className="mt-1 text-muted-foreground">{t('noTargetLocales')}</div>
             ) : (
               <div className="mt-2 flex flex-wrap gap-2">
                 {targetLocales.map((l) => (
                   <span
                     key={l}
-                    className="px-3 py-1 rounded-full bg-gray-100 text-gray-800"
+                    className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground"
                   >
                     {l}
                   </span>
                 ))}
               </div>
             )}
-            <div className="mt-2 text-sm text-gray-600">{t('removePolicy')}</div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              {t('removePolicy')}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -80,4 +82,3 @@ export default async function ProjectSettingsLocalesPage({
     </div>
   );
 }
-

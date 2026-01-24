@@ -20,9 +20,7 @@ export default async function PromoteUserPage({
 
   if (!currentUser.isSystemAdmin || !SUPER_ADMIN_ACCOUNTS.has(currentUser.email)) {
     return (
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="text-sm text-gray-600">{t('noPermission')}</div>
-      </main>
+      <div className="text-sm text-muted-foreground">{t('noPermission')}</div>
     );
   }
 
@@ -33,17 +31,17 @@ export default async function PromoteUserPage({
 
   if (!target || target.deletedAt) {
     return (
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="text-sm text-gray-600">{t('userNotFound')}</div>
-      </main>
+      <div className="text-sm text-muted-foreground">{t('userNotFound')}</div>
     );
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-gray-900">{t('promoteTitle')}</h1>
-        <Button asChild variant="secondary" className="rounded-full">
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-xl font-semibold text-foreground lg:text-2xl">
+          {t('promoteTitle')}
+        </h1>
+        <Button asChild variant="secondary">
           <Link href="/dashboard/users">{t('back')}</Link>
         </Button>
       </div>
@@ -53,15 +51,15 @@ export default async function PromoteUserPage({
           <CardTitle>{t('confirmAction')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             {t('targetUser')}: {target.email}
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {t('promotedCountHint', { limit: 5 })}
           </div>
           <PromoteForm userId={target.id} disabled={target.isSystemAdmin} />
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

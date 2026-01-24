@@ -75,10 +75,8 @@ export default async function ActivityPage() {
   const logs: Awaited<ReturnType<typeof getActivityLogs>> = await getActivityLogs();
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
-        {t('title')}
-      </h1>
+    <div className="space-y-6">
+      <h1 className="text-xl font-semibold text-foreground lg:text-2xl">{t('title')}</h1>
       <Card>
         <CardHeader>
           <CardTitle>{t('recentActivity')}</CardTitle>
@@ -92,15 +90,15 @@ export default async function ActivityPage() {
 
                 return (
                   <li key={log.id} className="flex items-center space-x-4">
-                    <div className="bg-orange-100 rounded-full p-2">
-                      <Icon className="w-5 h-5 text-orange-600" />
+                    <div className="bg-secondary rounded-full p-2">
+                      <Icon className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-foreground">
                         {formattedAction}
                         {log.ipAddress && t('fromIp', { ip: log.ipAddress })}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {getRelativeTime(new Date(log.timestamp), locale, t)}
                       </p>
                     </div>
@@ -110,17 +108,17 @@ export default async function ActivityPage() {
             </ul>
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-12">
-              <AlertCircle className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <AlertCircle className="h-12 w-12 text-primary mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 {t('emptyTitle')}
               </h3>
-              <p className="text-sm text-gray-500 max-w-sm">
+              <p className="text-sm text-muted-foreground max-w-sm">
                 {t('emptyDescription')}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
-    </section>
+    </div>
   );
 }

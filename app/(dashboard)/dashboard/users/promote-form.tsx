@@ -27,7 +27,6 @@ export function PromoteForm({
         type="submit"
         size="sm"
         variant="outline"
-        className="rounded-full"
         disabled={disabled || pending}
       >
         {t('promote')}

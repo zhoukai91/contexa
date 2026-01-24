@@ -61,7 +61,7 @@ function RoleSelect({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
-      className="h-9 rounded-full border border-gray-300 bg-white px-3 text-sm text-gray-900 disabled:bg-gray-50"
+      className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -105,18 +105,20 @@ function MemberRow({
   const removeDisabled = !canManageMembers || isCreator;
 
   return (
-    <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+    <div className="border border-border rounded-xl bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="font-medium text-gray-900 truncate">
+          <div className="font-medium text-foreground truncate">
             {row.name || row.email}
             {isCreator ? (
-              <span className="ml-2 text-xs text-gray-600">{t('creatorBadge')}</span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                {t('creatorBadge')}
+              </span>
             ) : null}
           </div>
-          <div className="text-sm text-gray-600 truncate">{row.email}</div>
+          <div className="text-sm text-muted-foreground truncate">{row.email}</div>
         </div>
-        <div className="text-sm text-gray-600 shrink-0">{row.createdAt}</div>
+        <div className="text-sm text-muted-foreground shrink-0">{row.createdAt}</div>
       </div>
 
       <form className="flex flex-col gap-3" action={updateAction}>
@@ -124,7 +126,7 @@ function MemberRow({
         <input type="hidden" name="userId" value={row.userId} />
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">{t('role')}</span>
+            <span className="text-sm text-muted-foreground">{t('role')}</span>
             <input type="hidden" name="role" value={role} />
             <RoleSelect
               value={role}
@@ -137,7 +139,7 @@ function MemberRow({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               name="canReview"
@@ -148,11 +150,7 @@ function MemberRow({
             {t('canReview')}
           </label>
 
-          <Button
-            type="submit"
-            className="rounded-full"
-            disabled={updating || roleEditingDisabled}
-          >
+          <Button type="submit" disabled={updating || roleEditingDisabled}>
             {updating ? t('saving') : t('save')}
           </Button>
         </div>
@@ -165,7 +163,6 @@ function MemberRow({
         <Button
           type="submit"
           variant="outline"
-          className="rounded-full"
           disabled={removing || removeDisabled}
         >
           {removing ? t('removing') : t('remove')}
@@ -204,17 +201,15 @@ export function ProjectMembersManager({
 
   return (
     <div className="space-y-4">
-      <div className="border border-gray-200 rounded-xl p-4">
-        <h2 className="text-base font-medium text-gray-900">{t('addTitle')}</h2>
-        <p className="mt-1 text-sm text-gray-600">{t('addSubtitle')}</p>
+      <div className="border border-border rounded-xl bg-card p-4">
+        <h2 className="text-base font-medium text-foreground">{t('addTitle')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t('addSubtitle')}</p>
 
         <form className="mt-4 space-y-4" action={addAction}>
           <input type="hidden" name="projectId" value={projectId} />
 
           <div>
-            <Label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              {t('email')}
-            </Label>
+            <Label htmlFor="email">{t('email')}</Label>
             <div className="mt-1">
               <Input
                 id="email"
@@ -225,7 +220,7 @@ export function ProjectMembersManager({
                 maxLength={200}
                 disabled={!canManageMembers}
                 list="project-member-email-options"
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm disabled:bg-gray-50"
+                className="h-10"
                 placeholder={t('emailPlaceholder')}
               />
               <datalist id="project-member-email-options">
@@ -240,7 +235,7 @@ export function ProjectMembersManager({
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">{t('role')}</span>
+              <span className="text-sm text-muted-foreground">{t('role')}</span>
               <RoleSelect
                 value={newRole}
                 onChange={(next) => {
@@ -253,7 +248,7 @@ export function ProjectMembersManager({
               <input type="hidden" name="role" value={newRole} />
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 name="canReview"
@@ -264,7 +259,7 @@ export function ProjectMembersManager({
               {t('canReview')}
             </label>
 
-            <Button type="submit" className="rounded-full" disabled={adding || !canManageMembers}>
+            <Button type="submit" disabled={adding || !canManageMembers}>
               {adding ? t('adding') : t('add')}
             </Button>
           </div>
@@ -274,9 +269,9 @@ export function ProjectMembersManager({
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-base font-medium text-gray-900">{t('membersTitle')}</h2>
+        <h2 className="text-base font-medium text-foreground">{t('membersTitle')}</h2>
         {members.length === 0 ? (
-          <div className="text-sm text-gray-600">{t('membersEmpty')}</div>
+          <div className="text-sm text-muted-foreground">{t('membersEmpty')}</div>
         ) : (
           <div className="space-y-3">
             {members.map((m) => (
@@ -294,19 +289,19 @@ export function ProjectMembersManager({
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-base font-medium text-gray-900">{t('invitationsTitle')}</h2>
+        <h2 className="text-base font-medium text-foreground">{t('invitationsTitle')}</h2>
         {invitations.length === 0 ? (
-          <div className="text-sm text-gray-600">{t('invitationsEmpty')}</div>
+          <div className="text-sm text-muted-foreground">{t('invitationsEmpty')}</div>
         ) : (
           <div className="space-y-2">
             {invitations.map((inv) => (
               <div
                 key={inv.id}
-                className="border border-gray-200 rounded-xl p-4 text-sm text-gray-700 flex items-start justify-between gap-4"
+                className="border border-border rounded-xl bg-card p-4 text-sm flex items-start justify-between gap-4"
               >
                 <div className="min-w-0">
-                  <div className="font-medium text-gray-900 truncate">{inv.email}</div>
-                  <div className="mt-1 text-gray-600">
+                  <div className="font-medium text-foreground truncate">{inv.email}</div>
+                  <div className="mt-1 text-muted-foreground">
                     {t('invitedAs')}：
                     {inv.role === 'admin'
                       ? tr('admin')
@@ -319,11 +314,11 @@ export function ProjectMembersManager({
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-1 text-gray-600">
+                  <div className="mt-1 text-muted-foreground">
                     {t('status')}：{inv.status}
                   </div>
                 </div>
-                <div className="shrink-0 text-gray-600">{inv.createdAt}</div>
+                <div className="shrink-0 text-muted-foreground">{inv.createdAt}</div>
               </div>
             ))}
           </div>

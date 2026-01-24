@@ -21,18 +21,22 @@ export default async function ProjectLayout({
 
   if (!Number.isFinite(id)) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="min-h-[calc(100dvh-68px)] bg-muted/30 px-4 py-6 lg:px-6">
+        <div className="mx-auto w-full max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t('invalidProjectIdTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">{t('invalidProjectIdDesc')}</div>
-            <Button asChild variant="outline" className="rounded-full">
+            <div className="text-sm text-muted-foreground">
+              {t('invalidProjectIdDesc')}
+            </div>
+            <Button asChild variant="outline">
               <Link href="/dashboard">{t('backToProjects')}</Link>
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
@@ -45,18 +49,20 @@ export default async function ProjectLayout({
 
   if (!user.isSystemAdmin && !member) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="min-h-[calc(100dvh-68px)] bg-muted/30 px-4 py-6 lg:px-6">
+        <div className="mx-auto w-full max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t('noAccessTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">{t('noAccessDesc')}</div>
-            <Button asChild variant="outline" className="rounded-full">
+            <div className="text-sm text-muted-foreground">{t('noAccessDesc')}</div>
+            <Button asChild variant="outline">
               <Link href="/dashboard">{t('backToProjects')}</Link>
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
@@ -68,29 +74,32 @@ export default async function ProjectLayout({
 
   if (!project) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="min-h-[calc(100dvh-68px)] bg-muted/30 px-4 py-6 lg:px-6">
+        <div className="mx-auto w-full max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t('notFoundTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">{t('notFoundDesc')}</div>
-            <Button asChild variant="outline" className="rounded-full">
+            <div className="text-sm text-muted-foreground">{t('notFoundDesc')}</div>
+            <Button asChild variant="outline">
               <Link href="/dashboard">{t('backToProjects')}</Link>
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
+    <div className="flex min-h-[calc(100dvh-68px)] w-full flex-col bg-muted/30">
       <div className="flex flex-1 overflow-hidden h-full">
         <ProjectSidebar projectId={project.id} projectName={project.name} />
-        <main className="flex-1 overflow-y-auto p-0 lg:p-4">{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 py-4 lg:px-6 lg:py-6">
+          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+        </main>
       </div>
     </div>
   );
 }
-

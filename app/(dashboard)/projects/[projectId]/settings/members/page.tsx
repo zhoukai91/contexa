@@ -64,7 +64,7 @@ export default async function ProjectSettingsMembersPage({
   return (
     <div className="space-y-4">
       {!canManageMembers ? (
-        <div className="text-sm text-gray-600">{t('readOnlyHint')}</div>
+        <div className="text-sm text-muted-foreground">{t('readOnlyHint')}</div>
       ) : null}
 
       <ProjectMembersManager

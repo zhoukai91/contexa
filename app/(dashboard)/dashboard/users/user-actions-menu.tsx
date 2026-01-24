@@ -24,9 +24,7 @@ export function UserActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="outline" className="rounded-full">
-          {t('actions')}
-        </Button>
+        <Button size="sm" variant="outline">{t('actions')}</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="flex flex-col gap-1">
         <DropdownMenuItem asChild className="cursor-pointer">

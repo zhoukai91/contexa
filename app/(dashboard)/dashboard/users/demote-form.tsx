@@ -27,7 +27,6 @@ export function DemoteForm({
         type="submit"
         size="sm"
         variant="destructive"
-        className="rounded-full"
         disabled={disabled || pending}
       >
         {t('demote')}
@@ -36,4 +35,3 @@ export function DemoteForm({
     </form>
   );
 }
-

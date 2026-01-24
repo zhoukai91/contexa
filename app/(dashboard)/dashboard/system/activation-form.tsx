@@ -32,10 +32,9 @@ export function ActivationForm() {
 
       <FormError message={state?.error} />
 
-      <Button type="submit" className="rounded-full" disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {t('submit')}
       </Button>
     </form>
   );
 }
-

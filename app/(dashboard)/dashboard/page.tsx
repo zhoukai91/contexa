@@ -46,11 +46,13 @@ export default async function DashboardProjectsPage() {
   });
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{t('title')}</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-xl font-semibold text-foreground lg:text-2xl">
+            {t('title')}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {user.isSystemAdmin
               ? t('subtitleSystemAdmin')
               : t('subtitleMember')}
@@ -59,7 +61,7 @@ export default async function DashboardProjectsPage() {
 
         <div className="flex items-center gap-2">
           {user.isSystemAdmin ? (
-            <Button asChild className="rounded-full">
+            <Button asChild>
               <Link href="/projects/new">{t('createProject')}</Link>
             </Button>
           ) : null}
@@ -67,59 +69,69 @@ export default async function DashboardProjectsPage() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {user.isSystemAdmin
-                  ? t('emptyTitleSystemAdmin')
-                  : t('emptyTitleMember')}
-              </CardTitle>
-              <CardDescription>
-                {user.isSystemAdmin
-                  ? t('emptyDescSystemAdmin')
-                  : t('emptyDescMember')}
-              </CardDescription>
-              {user.isSystemAdmin ? (
-                <CardAction>
-                  <Button asChild className="rounded-full">
-                    <Link href="/projects/new">{t('createProject')}</Link>
-                  </Button>
-                </CardAction>
-              ) : null}
-            </CardHeader>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {user.isSystemAdmin
+                ? t('emptyTitleSystemAdmin')
+                : t('emptyTitleMember')}
+            </CardTitle>
+            <CardDescription>
+              {user.isSystemAdmin ? t('emptyDescSystemAdmin') : t('emptyDescMember')}
+            </CardDescription>
+            {user.isSystemAdmin ? (
+              <CardAction>
+                <Button asChild>
+                  <Link href="/projects/new">{t('createProject')}</Link>
+                </Button>
+              </CardAction>
+            ) : null}
+          </CardHeader>
+        </Card>
       ) : (
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {projects.map((p) => (
-            <Link key={p.id} href={`/projects/${p.id}`} className="block">
-              <Card className="h-full hover:border-gray-300 transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-base">{p.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {p.description || '—'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-600 flex flex-col gap-1">
-                  <div>
-                    {t('sourceLocale')}：{p.sourceLocale}
-                  </div>
-                  <div>
-                    {t('entryCount')}：{p._count.entries}
-                  </div>
-                  <div>
-                    {t('createdAt')}：
-                    {new Date(p.createdAt).toLocaleString(locale, {
-                      hour12: false
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <Card>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs text-muted-foreground">
+                <tr className="border-b border-border">
+                  <th className="py-2 pr-4">{t('title')}</th>
+                  <th className="py-2 pr-4">{t('sourceLocale')}</th>
+                  <th className="py-2 pr-4 text-right">{t('entryCount')}</th>
+                  <th className="py-2 pr-4">{t('createdAt')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((p) => (
+                  <tr key={p.id} className="border-b border-border last:border-0">
+                    <td className="py-3 pr-4">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/projects/${p.id}`}
+                          className="block truncate font-medium text-foreground hover:underline"
+                        >
+                          {p.name}
+                        </Link>
+                        <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                          {p.description || '—'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground">
+                      {p.sourceLocale}
+                    </td>
+                    <td className="py-3 pr-4 whitespace-nowrap text-right text-muted-foreground">
+                      {p._count.entries}
+                    </td>
+                    <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground">
+                      {new Date(p.createdAt).toLocaleString(locale, { hour12: false })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       )}
-    </main>
+    </div>
   );
 }

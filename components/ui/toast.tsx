@@ -46,22 +46,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`rounded-xl border bg-white p-4 shadow-sm ${
+            className={`rounded-xl border bg-card p-4 shadow-sm ${
               toast.variant === 'destructive'
-                ? 'border-red-200'
-                : 'border-gray-200'
+                ? 'border-destructive/30'
+                : 'border-border'
             }`}
           >
             {toast.title ? (
-              <div className="text-sm font-semibold text-gray-900">
-                {toast.title}
-              </div>
+              <div className="text-sm font-semibold text-foreground">{toast.title}</div>
             ) : null}
             <div
               className={`mt-1 text-sm ${
                 toast.variant === 'destructive'
-                  ? 'text-red-700'
-                  : 'text-gray-700'
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
               }`}
             >
               {toast.message}
@@ -80,4 +78,3 @@ export function useToast() {
   }
   return ctx;
 }
-

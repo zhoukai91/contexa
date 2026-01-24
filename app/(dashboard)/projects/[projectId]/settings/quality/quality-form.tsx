@@ -35,36 +35,36 @@ export function ProjectSettingsQualityForm({
       <input type="hidden" name="translationAdapter" value={adapter} />
 
       <div className="space-y-2">
-        <Label className="block text-sm font-medium text-gray-700">{t('mode')}</Label>
+        <Label>{t('mode')}</Label>
         <RadioGroup
           value={qualityMode}
           onValueChange={(v) => setQualityMode(v)}
           className="grid gap-3"
           disabled={!canEdit}
         >
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <RadioGroupItem value="standard" />
             <span>{t('modeStandard')}</span>
           </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <RadioGroupItem value="lenient" />
             <span>{t('modeLenient')}</span>
           </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <RadioGroupItem value="strict" />
             <span>{t('modeStrict')}</span>
           </label>
         </RadioGroup>
-        <p className="text-sm text-gray-600">{t('modeHelp')}</p>
+        <p className="text-sm text-muted-foreground">{t('modeHelp')}</p>
       </div>
 
       <div className="space-y-2">
-        <Label className="block text-sm font-medium text-gray-700">{t('adapter')}</Label>
+        <Label>{t('adapter')}</Label>
         <select
           value={adapter}
           onChange={(e) => setAdapter(e.target.value)}
           disabled={!canEdit}
-          className="h-9 rounded-full border border-gray-300 bg-white px-3 text-sm text-gray-900 disabled:bg-gray-50"
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="tbd">{t('adapterTbd')}</option>
           <option value="vue-i18n">{t('adapterVueI18n')}</option>
@@ -73,17 +73,16 @@ export function ProjectSettingsQualityForm({
           <option value="printf">{t('adapterPrintf')}</option>
           <option value="custom">{t('adapterCustom')}</option>
         </select>
-        <p className="text-sm text-gray-600">{t('adapterHelp')}</p>
+        <p className="text-sm text-muted-foreground">{t('adapterHelp')}</p>
       </div>
 
       <FormError message={state?.error} />
 
       <div>
-        <Button type="submit" className="rounded-full" disabled={pending || !canEdit}>
+        <Button type="submit" disabled={pending || !canEdit}>
           {pending ? t('saving') : t('save')}
         </Button>
       </div>
     </form>
   );
 }
-

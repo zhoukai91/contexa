@@ -30,9 +30,7 @@ function ProjectSidebarNav({
     <Link key={item.href} href={item.href} passHref>
       <Button
         variant={isActive(item.href) ? 'secondary' : 'ghost'}
-        className={`shadow-none my-1 w-full justify-start ${
-          isActive(item.href) ? 'bg-gray-100' : ''
-        }`}
+        className="shadow-none my-0.5 h-9 w-full justify-start gap-2 px-3 text-sm"
         onClick={onNavigate}
       >
         <item.icon className="h-4 w-4" />
@@ -85,9 +83,9 @@ export function ProjectSidebar({
 
   return (
     <>
-      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
+      <div className="lg:hidden flex items-center justify-between bg-background border-b border-border px-4 py-3">
         <div className="flex items-center">
-          <span className="font-medium">{t('mobileTitle', { projectName })}</span>
+          <span className="text-sm font-medium">{t('mobileTitle', { projectName })}</span>
         </div>
         <Button
           className="-mr-3"
@@ -100,13 +98,18 @@ export function ProjectSidebar({
       </div>
 
       <aside
-        className={`w-64 bg-white lg:bg-gray-50 border-r border-gray-200 lg:block ${
+        className={`w-64 shrink-0 bg-background border-r border-border lg:block ${
           isSidebarOpen ? 'block' : 'hidden'
         } lg:relative absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <nav className="h-full overflow-y-auto p-4">
+        <nav className="h-full overflow-y-auto p-3">
+          <div className="hidden lg:block px-3 py-2">
+            <div className="truncate text-sm font-semibold text-foreground">
+              {projectName}
+            </div>
+          </div>
           <Suspense fallback={null}>
             <ProjectSidebarNav
               navItems={navItems}
@@ -118,4 +121,3 @@ export function ProjectSidebar({
     </>
   );
 }
-

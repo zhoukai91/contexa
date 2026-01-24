@@ -26,15 +26,10 @@ export function ResetPasswordForm({ userId }: { userId: number }) {
           minLength={6}
           maxLength={100}
           pattern="[A-Za-z0-9.@]+"
-          className="h-9 rounded-full"
+          className="h-9"
           placeholder={t('newPasswordPlaceholder')}
         />
-        <Button
-          type="submit"
-          size="sm"
-          className="rounded-full"
-          disabled={pending}
-        >
+        <Button type="submit" size="sm" disabled={pending}>
           {t('reset')}
         </Button>
       </div>

@@ -57,7 +57,7 @@ function DialogContent({
         {children}
         <DialogPrimitive.Close
           data-slot="dialog-content-close"
-          className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:pointer-events-none"
+          className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none"
         >
           <XIcon className="size-4" />
         </DialogPrimitive.Close>

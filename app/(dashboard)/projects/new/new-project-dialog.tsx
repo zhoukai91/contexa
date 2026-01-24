@@ -24,13 +24,15 @@ export function NewProjectDialog({
     >
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-gray-900">{title}</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-foreground">
+            {title}
+          </DialogTitle>
         </DialogHeader>
 
         <NewProjectForm />
 
         <DialogFooter className="pt-2">
-          <Button asChild variant="outline" className="rounded-full">
+          <Button asChild variant="outline">
             <Link href="/dashboard">{backLabel}</Link>
           </Button>
         </DialogFooter>
@@ -38,4 +40,3 @@ export function NewProjectDialog({
     </Dialog>
   );
 }
-

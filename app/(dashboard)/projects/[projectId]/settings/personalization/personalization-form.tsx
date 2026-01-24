@@ -44,13 +44,13 @@ export function ProjectSettingsPersonalizationForm({
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="localesJson" value={JSON.stringify(selected)} />
 
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-muted-foreground">
         {t('selectedCount', { selected: selected.length, max: 3 })}
       </div>
 
       <div className="space-y-2">
         {targetLocales.map((locale) => (
-          <label key={locale} className="flex items-center gap-2 text-sm text-gray-700">
+          <label key={locale} className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={selectedSet.has(locale)}
@@ -64,11 +64,10 @@ export function ProjectSettingsPersonalizationForm({
       <FormError message={state?.error} />
 
       <div>
-        <Button type="submit" className="rounded-full" disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {pending ? t('saving') : t('save')}
         </Button>
       </div>
     </form>
   );
 }
-

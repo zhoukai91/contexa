@@ -12,23 +12,20 @@ export function PageError({
   onRetry?: () => void;
 }) {
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-2xl border bg-white p-6">
-        <h2 className="text-lg font-semibold text-gray-900">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold text-foreground">
           {title || 'Something went wrong'}
         </h2>
         {message ? (
-          <p className="mt-2 text-sm text-gray-600">{message}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{message}</p>
         ) : null}
         {onRetry ? (
           <div className="mt-4">
-            <Button onClick={onRetry} className="rounded-full">
-              Retry
-            </Button>
+            <Button onClick={onRetry}>Retry</Button>
           </div>
         ) : null}
       </div>
     </div>
   );
 }
-

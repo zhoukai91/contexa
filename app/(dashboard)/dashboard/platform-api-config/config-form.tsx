@@ -19,7 +19,7 @@ export function PlatformApiConfigForm() {
   return (
     <form action={formAction} className="space-y-6">
       <div className="space-y-4">
-        <h2 className="text-sm font-medium text-gray-900">{t('llmTitle')}</h2>
+        <h2 className="text-sm font-medium text-foreground">{t('llmTitle')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="llmProvider" className="mb-2">
@@ -59,7 +59,7 @@ export function PlatformApiConfigForm() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-sm font-medium text-gray-900">{t('mtTitle')}</h2>
+        <h2 className="text-sm font-medium text-foreground">{t('mtTitle')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="mtProvider" className="mb-2">
@@ -90,10 +90,9 @@ export function PlatformApiConfigForm() {
 
       <FormError message={state?.error} />
 
-      <Button type="submit" className="rounded-full" disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {t('save')}
       </Button>
     </form>
   );
 }
-

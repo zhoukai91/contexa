@@ -36,10 +36,8 @@ export default function SecurityPage() {
   >(deleteAccount, {});
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium bold text-gray-900 mb-6">
-        {t('title')}
-      </h1>
+    <div className="space-y-6">
+      <h1 className="text-xl font-semibold text-foreground lg:text-2xl">{t('title')}</h1>
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>{t('passwordTitle')}</CardTitle>
@@ -47,9 +45,7 @@ export default function SecurityPage() {
         <CardContent>
           <form className="space-y-4" action={passwordAction}>
             <div>
-              <Label htmlFor="current-password" className="mb-2">
-                {t('currentPassword')}
-              </Label>
+              <Label htmlFor="current-password" className="mb-2">{t('currentPassword')}</Label>
               <Input
                 id="current-password"
                 name="currentPassword"
@@ -62,9 +58,7 @@ export default function SecurityPage() {
               />
             </div>
             <div>
-              <Label htmlFor="new-password" className="mb-2">
-                {t('newPassword')}
-              </Label>
+              <Label htmlFor="new-password" className="mb-2">{t('newPassword')}</Label>
               <Input
                 id="new-password"
                 name="newPassword"
@@ -77,9 +71,7 @@ export default function SecurityPage() {
               />
             </div>
             <div>
-              <Label htmlFor="confirm-password" className="mb-2">
-                {t('confirmNewPassword')}
-              </Label>
+              <Label htmlFor="confirm-password" className="mb-2">{t('confirmNewPassword')}</Label>
               <Input
                 id="confirm-password"
                 name="confirmPassword"
@@ -91,16 +83,12 @@ export default function SecurityPage() {
               />
             </div>
             {passwordState.error && (
-              <p className="text-red-500 text-sm">{passwordState.error}</p>
+              <p className="text-destructive text-sm">{passwordState.error}</p>
             )}
             {passwordState.success && (
-              <p className="text-green-500 text-sm">{passwordState.success}</p>
+              <p className="text-success text-sm">{passwordState.success}</p>
             )}
-            <Button
-              type="submit"
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-              disabled={isPasswordPending}
-            >
+            <Button type="submit" disabled={isPasswordPending}>
               {isPasswordPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -117,6 +105,6 @@ export default function SecurityPage() {
         </CardContent>
       </Card>
 
-    </section>
+    </div>
   );
 }

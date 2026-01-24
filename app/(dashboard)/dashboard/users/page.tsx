@@ -45,69 +45,57 @@ export default async function UsersPage() {
   const canPromote = SUPER_ADMIN_ACCOUNTS.has(user.email) && promotedCount < 5;
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{t('title')}</h1>
-            <p className="mt-1 text-sm text-gray-600">
-              {t('promotedCount', { count: promotedCount, limit: 5 })}
-            </p>
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('listTitle')}</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-gray-500">
-                <tr className="border-b">
-                  <th className="py-2 pr-4">{t('email')}</th>
-                  <th className="py-2 pr-4">{t('name')}</th>
-                  <th className="py-2 pr-4">{t('isSystemAdmin')}</th>
-                  <th className="py-2 pr-4">{t('createdAt')}</th>
-                  <th className="py-2 pr-4">{t('operations')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className="border-b align-top">
-                    <td className="py-3 pr-4 font-medium text-gray-900">
-                      {u.email}
-                    </td>
-                    <td className="py-3 pr-4 text-gray-700">{u.name || t('empty')}</td>
-                    <td className="py-3 pr-4 text-gray-700">
-                      {u.isSystemAdmin ? t('yes') : t('no')}
-                    </td>
-                    <td className="py-3 pr-4 text-gray-700">
-                      {new Date(u.createdAt).toLocaleString(locale, {
-                        hour12: false
-                      })}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <UserActionsMenu
-                        userId={u.id}
-                        canPromote={
-                          canPromote &&
-                          !u.isSystemAdmin &&
-                          !SUPER_ADMIN_ACCOUNTS.has(u.email)
-                        }
-                        canDemote={
-                          SUPER_ADMIN_ACCOUNTS.has(user.email) &&
-                          u.isSystemAdmin &&
-                          !SUPER_ADMIN_ACCOUNTS.has(u.email)
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold text-foreground lg:text-2xl">{t('title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('promotedCount', { count: promotedCount, limit: 5 })}
+        </p>
       </div>
-    </main>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('listTitle')}</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-muted-foreground">
+              <tr className="border-b border-border">
+                <th className="py-2 pr-4">{t('email')}</th>
+                <th className="py-2 pr-4">{t('name')}</th>
+                <th className="py-2 pr-4">{t('isSystemAdmin')}</th>
+                <th className="py-2 pr-4">{t('createdAt')}</th>
+                <th className="py-2 pr-4">{t('operations')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id} className="border-b border-border last:border-0 align-top">
+                  <td className="py-3 pr-4 font-medium text-foreground">{u.email}</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{u.name || t('empty')}</td>
+                  <td className="py-3 pr-4 text-muted-foreground">
+                    {u.isSystemAdmin ? t('yes') : t('no')}
+                  </td>
+                  <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground">
+                    {new Date(u.createdAt).toLocaleString(locale, { hour12: false })}
+                  </td>
+                  <td className="py-3 pr-4">
+                    <UserActionsMenu
+                      userId={u.id}
+                      canPromote={canPromote && !u.isSystemAdmin && !SUPER_ADMIN_ACCOUNTS.has(u.email)}
+                      canDemote={
+                        SUPER_ADMIN_ACCOUNTS.has(user.email) &&
+                        u.isSystemAdmin &&
+                        !SUPER_ADMIN_ACCOUNTS.has(u.email)
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

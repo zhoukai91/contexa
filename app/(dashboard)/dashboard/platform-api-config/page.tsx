@@ -18,19 +18,21 @@ export default async function PlatformApiConfigPage() {
   const hasPermission = user.isSystemAdmin || isProjectAdmin;
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-gray-900">{t('title')}</h1>
-        <Button asChild variant="secondary" className="rounded-full">
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground lg:text-2xl">{t('title')}</h1>
+        </div>
+        <Button asChild variant="secondary">
           <Link href="/dashboard">{t('back')}</Link>
         </Button>
       </div>
 
       {!hasPermission ? (
-        <div className="mt-6 text-sm text-gray-600">{t('noPermission')}</div>
+        <div className="text-sm text-muted-foreground">{t('noPermission')}</div>
       ) : (
-        <div className="mt-6 space-y-4">
-          <div className="text-sm text-gray-600">
+        <div className="space-y-4">
+          <div className="text-sm text-muted-foreground">
             {enhancedStatus.connected ? t('connectedHint') : t('disconnectedHint')}
           </div>
           <Card>
@@ -43,7 +45,6 @@ export default async function PlatformApiConfigPage() {
           </Card>
         </div>
       )}
-    </main>
+    </div>
   );
 }
-

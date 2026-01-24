@@ -52,7 +52,7 @@ export function LocaleSelect({
           variant="outline"
           disabled={disabled}
           className={cn(
-            'relative h-10 w-full justify-between rounded-full border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2',
+            'relative h-10 w-full justify-between',
             className
           )}
         >

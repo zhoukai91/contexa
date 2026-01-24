@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut } from 'lucide-react';
+import { Home, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/types';
 import useSWR, { mutate } from 'swr';
 import { SessionKeepAlive } from './session-keep-alive';
+import { LogoMark } from '@/components/brand/logo-mark';
 
 const fetcher = (url: string) =>
   fetch(url)
@@ -36,7 +37,7 @@ function UserMenu() {
   if (!user) {
     return (
       <>
-        <Button asChild className="rounded-full">
+        <Button asChild>
           <Link href="/sign-up">Sign Up</Link>
         </Button>
       </>
@@ -80,13 +81,13 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 
 function Header() {
   return (
-    <header className="border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center">
-          <CircleIcon className="h-6 w-6 text-orange-500" />
-          <span className="ml-2 text-xl font-semibold text-gray-900">Contexa</span>
+    <header className="h-[68px] border-b border-border bg-background/80 backdrop-blur">
+      <div className="mx-auto flex h-full w-full max-w-[1400px] items-center justify-between px-4 lg:px-6">
+        <Link href="/" className="flex items-center gap-2">
+          <LogoMark className="h-5 w-5 text-primary" />
+          <span className="text-base font-semibold text-foreground">Contexa</span>
         </Link>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3">
           <LanguageSwitcher />
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />

@@ -17,7 +17,6 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { ChevronDownIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export function NewProjectForm() {
   const t = useTranslations('newProject');
@@ -53,9 +52,7 @@ export function NewProjectForm() {
     <form className="space-y-5" action={formAction}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
-          <Label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            {t('nameLabel')}
-          </Label>
+          <Label htmlFor="name">{t('nameLabel')}</Label>
           <div className="mt-1">
             <Input
               id="name"
@@ -64,16 +61,14 @@ export function NewProjectForm() {
               defaultValue={state.name}
               required
               maxLength={100}
-              className="h-10 rounded-full border-gray-300"
+              className="h-10"
               placeholder={t('namePlaceholder')}
             />
           </div>
         </div>
 
         <div>
-          <Label htmlFor="sourceLocale" className="block text-sm font-medium text-gray-700">
-            {t('sourceLocaleLabel')}
-          </Label>
+          <Label htmlFor="sourceLocale">{t('sourceLocaleLabel')}</Label>
           <div className="mt-1">
             <LocaleSelect
               id="sourceLocale"
@@ -85,12 +80,7 @@ export function NewProjectForm() {
         </div>
 
         <div>
-          <Label
-            htmlFor="translationAdapter"
-            className="block text-sm font-medium text-gray-700"
-          >
-            {t('adapterLabel')}
-          </Label>
+          <Label htmlFor="translationAdapter">{t('adapterLabel')}</Label>
           <div className="mt-1">
             <DropdownMenu>
               <input
@@ -104,7 +94,7 @@ export function NewProjectForm() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="relative h-10 w-full justify-between rounded-full border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+                  className="relative h-10 w-full justify-between"
                 >
                   <span className="truncate">{adapterLabel}</span>
                   <ChevronDownIcon className="size-4 opacity-60" />
@@ -127,9 +117,7 @@ export function NewProjectForm() {
         </div>
 
         <div className="md:col-span-2">
-          <Label htmlFor="description" className="block text-sm font-medium text-gray-700">
-            {t('descriptionLabel')}
-          </Label>
+          <Label htmlFor="description">{t('descriptionLabel')}</Label>
           <div className="mt-1">
             <Input
               id="description"
@@ -137,7 +125,7 @@ export function NewProjectForm() {
               type="text"
               defaultValue={state.description}
               maxLength={2000}
-              className="h-10 rounded-full border-gray-300"
+              className="h-10"
               placeholder={t('descriptionPlaceholder')}
             />
           </div>
@@ -147,13 +135,7 @@ export function NewProjectForm() {
       <FormError message={state?.error} />
 
       <div>
-        <Button
-          type="submit"
-          className={cn(
-            'w-full rounded-full bg-orange-600 text-white shadow-sm hover:bg-orange-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2'
-          )}
-          disabled={pending}
-        >
+        <Button type="submit" className="w-full" size="lg" disabled={pending}>
           {pending ? t('submitting') : t('submit')}
         </Button>
       </div>

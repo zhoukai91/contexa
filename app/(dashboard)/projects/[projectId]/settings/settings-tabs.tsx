@@ -23,13 +23,13 @@ export function ProjectSettingsTabs({ projectId }: { projectId: number }) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-background p-1">
       {tabs.map((tab) => (
         <Button
           asChild
           key={tab.href}
           variant={isActive(tab.href) ? 'secondary' : 'ghost'}
-          className={`rounded-full shadow-none ${isActive(tab.href) ? 'bg-gray-100' : ''}`}
+          className="h-9 px-3 shadow-none"
         >
           <Link href={tab.href}>{tab.label}</Link>
         </Button>
@@ -37,4 +37,3 @@ export function ProjectSettingsTabs({ projectId }: { projectId: number }) {
     </div>
   );
 }
-

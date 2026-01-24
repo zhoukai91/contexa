@@ -39,7 +39,7 @@ export default async function ProjectSettingsPersonalizationPage({
           <CardTitle className="text-base">{t('noTargetLocalesTitle')}</CardTitle>
           <CardDescription>{t('noTargetLocalesDesc')}</CardDescription>
           <CardAction>
-            <Button asChild className="rounded-full">
+            <Button asChild>
               <Link href={`/projects/${id}/settings/locales`}>{t('goToLocales')}</Link>
             </Button>
           </CardAction>

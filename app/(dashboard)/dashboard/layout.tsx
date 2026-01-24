@@ -27,9 +27,7 @@ function SidebarNav({
     <Link key={item.href} href={item.href} passHref>
       <Button
         variant={isActive(item.href) ? 'secondary' : 'ghost'}
-        className={`shadow-none my-1 w-full justify-start ${
-          isActive(item.href) ? 'bg-gray-100' : ''
-        }`}
+        className="shadow-none my-0.5 h-9 w-full justify-start gap-2 px-3 text-sm"
         onClick={onNavigate}
       >
         <item.icon className="h-4 w-4" />
@@ -65,11 +63,11 @@ export default function DashboardLayout({
   );
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
+    <div className="flex min-h-[calc(100dvh-68px)] w-full flex-col bg-muted/30">
       {/* Mobile header */}
-      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
+      <div className="lg:hidden flex items-center justify-between bg-background border-b border-border px-4 py-3">
         <div className="flex items-center">
-          <span className="font-medium">{t('mobileTitle')}</span>
+          <span className="text-sm font-medium">{t('mobileTitle')}</span>
         </div>
         <Button
           className="-mr-3"
@@ -84,13 +82,13 @@ export default function DashboardLayout({
       <div className="flex flex-1 overflow-hidden h-full">
         {/* Sidebar */}
         <aside
-          className={`w-64 bg-white lg:bg-gray-50 border-r border-gray-200 lg:block ${
+          className={`w-64 shrink-0 bg-background border-r border-border lg:block ${
             isSidebarOpen ? 'block' : 'hidden'
           } lg:relative absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <nav className="h-full overflow-y-auto p-4">
+          <nav className="h-full overflow-y-auto p-3">
             <Suspense fallback={null}>
               <SidebarNav
                 navItems={navItems}
@@ -101,7 +99,9 @@ export default function DashboardLayout({
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-0 lg:p-4">{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 py-4 lg:px-6 lg:py-6">
+          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+        </main>
       </div>
     </div>
   );
