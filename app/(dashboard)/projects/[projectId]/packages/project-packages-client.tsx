@@ -759,7 +759,6 @@ export function ProjectPackagesClient({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">语言选择</CardTitle>
-          <CardDescription>源语言 key/文案来自上传；目标语言来自上传或平台内翻译。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -809,7 +808,7 @@ export function ProjectPackagesClient({
             <CardHeader>
               <div>
                 <CardTitle className="text-base">词条池</CardTitle>
-                <CardDescription>平台内所有词条展示与维护；导入导出与上传历史已迁移到项目概览。</CardDescription>
+                {/* <CardDescription>平台内所有词条展示与维护</CardDescription> */}
               </div>
               <CardAction className="flex items-center gap-2">
                 <Button asChild variant="outline">
@@ -1111,12 +1110,12 @@ export function ProjectPackagesClient({
           </Dialog>
         </>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
+        <div className="grid gap-4 grid-cols-1">
           <div className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">上传语言包（{localeLabel(selectedLocale)}）</CardTitle>
-                <CardDescription>仅支持扁平 key-value JSON；一份 JSON 对应一种语言。</CardDescription>
+                <CardDescription>一份 JSON 对应一种语言。</CardDescription>
                 <CardAction className="flex items-center gap-2">
                   <Dialog
                     open={exportOpen}
@@ -1298,14 +1297,6 @@ export function ProjectPackagesClient({
                         >
                           <Eye />
                           查看详情
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                        >
-                          <Link href="#upload-history">查看上传历史</Link>
                         </Button>
                       </div>
                     </div>
