@@ -52,6 +52,7 @@ model User {
   projectInvitationsSent ProjectInvitation[] @relation("ProjectInvitationInvitedBy")
   localePreferences UserProjectLocalePreference[]
 
+  packageUploads PackageUpload[]
   glossaryTermsCreated ProjectGlossaryTerm[] @relation("GlossaryTermCreatedBy")
   glossaryTermsUpdated ProjectGlossaryTerm[] @relation("GlossaryTermUpdatedBy")
   negativePromptsCreated ProjectNegativePrompt[] @relation("NegativePromptCreatedBy")
@@ -131,6 +132,7 @@ model Project {
   translations Translation[]
   pages       Page[]
   locks       TranslationPageLock[]
+  packageUploads PackageUpload[]
   createdBy   User?    @relation("ProjectCreatedBy", fields: [createdByUserId], references: [id])
   invitations ProjectInvitation[]
   localePreferences UserProjectLocalePreference[]
@@ -338,4 +340,28 @@ model ProjectNegativePrompt {
   @@unique([projectId, locale, phrase])
   @@index([projectId, locale])
   @@index([projectId, locale, status])
+}
+
+model PackageUpload {
+  id              Int      @id @default(autoincrement())
+  projectId        Int
+  locale           String
+  shape            String
+  createdByUserId  Int?
+  createdAt        DateTime @default(now())
+
+  summaryAdded            Int @default(0)
+  summaryUpdated          Int @default(0)
+  summaryMissing          Int @default(0)
+  summaryIgnored          Int @default(0)
+  summaryMarkedNeedsUpdate Int @default(0)
+  summarySkippedEmpty     Int @default(0)
+
+  detailsJson      String?
+
+  project   Project @relation(fields: [projectId], references: [id])
+  createdBy User?   @relation(fields: [createdByUserId], references: [id])
+
+  @@index([projectId, createdAt])
+  @@index([createdByUserId, createdAt])
 }
