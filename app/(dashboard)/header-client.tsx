@@ -13,7 +13,7 @@ import { signOut } from '@/app/(login)/actions';
 
 type HeaderUser = {
   id: number;
-  email: string;
+  account: string;
   name: string | null;
 } | null;
 
@@ -35,7 +35,7 @@ function UserMenu({ user }: { user: HeaderUser }) {
     );
   }
 
-  const initials = user.email
+  const initials = user.account
     .split(' ')
     .map((n) => n[0])
     .join('');

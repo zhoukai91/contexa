@@ -24,7 +24,7 @@ export default async function ResetPasswordPage({
 
   const target = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, deletedAt: true }
+    select: { id: true, account: true, deletedAt: true }
   });
 
   if (!target || target.deletedAt) {
@@ -46,7 +46,7 @@ export default async function ResetPasswordPage({
 
       <Card title={t('confirmAction')} contentClassName="space-y-4">
           <div className="text-sm text-muted-foreground">
-            {t('targetUser')}: {target.email}
+            {t('targetUser')}: {target.account}
           </div>
           <ResetPasswordForm userId={target.id} />
       </Card>

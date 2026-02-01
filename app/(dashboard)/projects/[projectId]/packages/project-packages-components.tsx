@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { Download, Eye, Loader2, Plus, RefreshCcw, Upload } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Download, Loader2, RefreshCcw, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog-primitives';
 import { DropdownMenu } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ export type TabKey = 'entries' | 'import' | 'history';
 export type ImportPreview = {
   kind: 'source' | 'target';
   shape: 'flat' | 'tree';
+  incomingKeys: string[];
   incomingTotal: number;
   existingTotal: number;
   existingWithPlacements: number;
@@ -280,7 +282,7 @@ export function PlacementsDialog({
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm text-muted-foreground">共 {placements.length} 条</div>
               <Button asChild variant="outline" size="sm">
-                <Link href={`/projects/${projectId}/context`}>去 06 按页面维护</Link>
+                <Link href={`/projects/${projectId}/context`}>前往页面/模块管理</Link>
               </Button>
             </div>
             <div className="rounded-md border">
@@ -405,7 +407,7 @@ export function HistoryDetailSheet({
                       jumpLocale
                     )}&status=${jumpStatus}&key=${encodeURIComponent(jumpKey)}`}
                   >
-                    去 05 预置筛选
+                    前往翻译工作台
                   </Link>
                 </Button>
               );
@@ -685,10 +687,10 @@ export function CreateEntrySheet({
             </div>
           ) : (
             <div className="rounded-md border bg-card p-3 text-sm text-muted-foreground">
-              项目尚未建立页面/模块结构，归属选择不可用。可前往 06 创建页面/模块后再回来设置。
+              项目尚未建立页面/模块结构，暂时无法设置归属。可先创建页面/模块后再回来设置。
               <div className="mt-2">
                 <Button asChild size="sm" variant="outline">
-                  <Link href={`/projects/${projectId}/context`}>前往 06 页面/上下文</Link>
+                  <Link href={`/projects/${projectId}/context`}>前往页面/模块管理</Link>
                 </Button>
               </div>
             </div>
@@ -861,7 +863,7 @@ export function EntriesTabContent({
             items={[
               {
                 type: 'checkbox',
-                label: '仅看词条池（未归属）',
+                label: '仅看未分类词条（未归属）',
                 checked: poolOnly,
                 onCheckedChange: (checked) => onPoolOnlyChange(Boolean(checked))
               },
@@ -888,7 +890,7 @@ export function EntriesTabContent({
                   { value: 'pending', label: '待翻译', disabled: isSource },
                   { value: 'needs_update', label: '待更新', disabled: isSource },
                   { value: 'needs_review', label: '待核对', disabled: isSource },
-                  { value: 'ready', label: '待核对（ready）', disabled: isSource },
+                  { value: 'ready', label: '待核对', disabled: isSource },
                   { value: 'approved', label: '已定版', disabled: isSource }
                 ]
               }
@@ -919,6 +921,7 @@ export function ImportTabContent({
   importFileName,
   importFileSize,
   importPreview,
+  importMap,
   importError,
   previewTab,
   onPreviewTabChange,
@@ -926,34 +929,11 @@ export function ImportTabContent({
   onReset,
   onConfirm,
   canManage,
-  canConfirm,
-  bindLevel,
-  onBindLevelChange,
-  bindMode,
-  onBindModeChange,
   contextError,
   contextLoaded,
   contextBusy,
   contextPages,
-  pageMode,
-  onPageModeChange,
-  pageId,
-  onPageIdChange,
-  createPageRoute,
-  onCreatePageRouteChange,
-  createPageTitle,
-  onCreatePageTitleChange,
-  moduleMode,
-  onModuleModeChange,
-  moduleId,
-  onModuleIdChange,
-  createModuleName,
-  onCreateModuleNameChange,
-  selectedPage,
-  moduleOptions,
-  projectId,
-  bindValidationError,
-  bindWarning
+  projectId
 }: {
   selectedLocale: string;
   isSource: boolean;
@@ -963,77 +943,578 @@ export function ImportTabContent({
   importFileName: string;
   importFileSize: number | null;
   importPreview: ImportPreview | null;
+  importMap: Record<string, string> | null;
   importError: string | null;
   previewTab: 'added' | 'updated' | 'ignored';
   onPreviewTabChange: (value: 'added' | 'updated' | 'ignored') => void;
   onPickFile: (file: File) => void;
   onReset: () => void;
-  onConfirm: () => void;
+  onConfirm: (bindPlan: ImportBindPlanDraft | null) => void;
   canManage: boolean;
-  canConfirm: boolean;
-  bindLevel: 'off' | 'page' | 'module';
-  onBindLevelChange: (value: 'off' | 'page' | 'module') => void;
-  bindMode: 'all' | 'addedOnly';
-  onBindModeChange: (value: 'all' | 'addedOnly') => void;
   contextError: string | null;
   contextLoaded: boolean;
   contextBusy: boolean;
   contextPages: PackagesContextPageNode[];
-  pageMode: 'existing' | 'create';
-  onPageModeChange: (value: 'existing' | 'create') => void;
-  pageId: string;
-  onPageIdChange: (value: string) => void;
-  createPageRoute: string;
-  onCreatePageRouteChange: (value: string) => void;
-  createPageTitle: string;
-  onCreatePageTitleChange: (value: string) => void;
-  moduleMode: 'existing' | 'create';
-  onModuleModeChange: (value: 'existing' | 'create') => void;
-  moduleId: string;
-  onModuleIdChange: (value: string) => void;
-  createModuleName: string;
-  onCreateModuleNameChange: (value: string) => void;
-  selectedPage: PackagesContextPageNode | null;
-  moduleOptions: Array<{ value: string; label: string }>;
   projectId: number;
-  bindValidationError: string | null;
-  bindWarning: string | null;
 }) {
   const hasActionableChanges = importPreview ? importPreview.summary.added + importPreview.summary.updated > 0 : false;
   const [dragActive, setDragActive] = useState(false);
-  const bindHint = useMemo(() => {
-    if (bindLevel === 'off') return null;
+  const [bindMode, setBindMode] = useState<'off' | 'single' | 'per_key'>('off');
+  const [bindScope, setBindScope] = useState<'new_only' | 'all'>('new_only');
 
-    const pageLabel =
-      pageMode === 'create'
-        ? createPageRoute.trim()
-          ? `新建页面 ${createPageRoute.trim()}`
-          : '新建页面'
-        : selectedPage
-          ? selectedPage.title
-            ? `${selectedPage.title} · ${selectedPage.route}`
-            : selectedPage.route
-          : '未选择页面';
+  const [singlePageMode, setSinglePageMode] = useState<'existing' | 'create'>('existing');
+  const [singlePageId, setSinglePageId] = useState('');
+  const [singleCreatePageRoute, setSingleCreatePageRoute] = useState('');
+  const [singleCreatePageTitle, setSingleCreatePageTitle] = useState('');
+  const [singleModuleMode, setSingleModuleMode] = useState<'none' | 'existing' | 'create'>('none');
+  const [singleModuleId, setSingleModuleId] = useState('');
+  const [singleCreateModuleName, setSingleCreateModuleName] = useState('');
 
-    if (bindLevel === 'page') return `导入后将自动绑定到：${pageLabel}`;
+  const [perKeyQuery, setPerKeyQuery] = useState('');
+  const [perKeySelected, setPerKeySelected] = useState<string[]>([]);
+  const [perKeyAssign, setPerKeyAssign] = useState<Record<string, { pageId: string; moduleId?: string }>>({});
+  const [perKeyBulkPageId, setPerKeyBulkPageId] = useState('');
+  const [perKeyBulkModuleId, setPerKeyBulkModuleId] = useState('');
 
-    const moduleLabel =
-      moduleMode === 'create'
-        ? createModuleName.trim()
-          ? `新建模块 ${createModuleName.trim()}`
-          : '新建模块'
-        : moduleId
-          ? moduleOptions.find((m) => m.value === moduleId)?.label ?? '已选择模块'
-          : '未选择模块';
+  useEffect(() => {
+    if (importPreview?.kind === 'target') setBindScope('all');
+  }, [importPreview?.kind]);
 
-    return `导入后将自动绑定到：${pageLabel} / ${moduleLabel}`;
-  }, [bindLevel, createModuleName, createPageRoute, moduleId, moduleMode, moduleOptions, pageMode, selectedPage]);
+  const effectiveScope = importPreview?.kind === 'target' ? 'all' : bindScope;
 
-  const bindCountHint = useMemo(() => {
-    if (!importPreview || bindLevel === 'off') return null;
-    if (bindMode === 'addedOnly' && importPreview.kind === 'source') return `绑定范围：仅新增 ${importPreview.summary.added} 条`;
-    return `绑定范围：导入文件中的 ${importPreview.incomingTotal} 条 key（存在的 + 新增的）`;
-  }, [bindLevel, bindMode, importPreview]);
+  const pageOptions = useMemo(
+    () =>
+      contextPages.map((p) => ({
+        value: String(p.id),
+        label: p.title ? `${p.title} · ${p.route}` : p.route
+      })),
+    [contextPages]
+  );
+
+  const getModuleOptionsByPageId = (pageId: string) => {
+    const id = Number(pageId);
+    if (!Number.isFinite(id)) return [];
+    const page = contextPages.find((p) => p.id === id);
+    if (!page) return [];
+    return page.modules.map((m) => ({ value: String(m.id), label: m.name }));
+  };
+
+  const perKeyCandidates = useMemo(() => {
+    if (!importPreview) return [];
+    if (effectiveScope === 'new_only') {
+      if (importPreview.kind !== 'source') return [];
+      return importPreview.added.map((a) => ({ key: a.key, text: a.text }));
+    }
+    return importPreview.incomingKeys.map((k) => ({ key: k, text: importMap?.[k] ?? '' }));
+  }, [effectiveScope, importMap, importPreview]);
+
+  const perKeyPagination = useSearchPagination({
+    items: perKeyCandidates,
+    query: perKeyQuery,
+    pageSize: 20,
+    predicate: (it, q) => it.key.toLowerCase().includes(q) || it.text.toLowerCase().includes(q)
+  });
+
+  const perKeyAssignedCount = useMemo(() => {
+    let count = 0;
+    for (const k of perKeyCandidates.map((it) => it.key)) {
+      if (perKeyAssign[k]?.pageId) count += 1;
+    }
+    return count;
+  }, [perKeyAssign, perKeyCandidates]);
+
+  const bindPlan = useMemo((): ImportBindPlanDraft | null => {
+    if (bindMode === 'off') return null;
+    if (bindMode === 'single') {
+      return {
+        mode: 'single',
+        scope: effectiveScope,
+        pageMode: singlePageMode,
+        pageId: singlePageMode === 'existing' ? singlePageId : undefined,
+        createPageRoute: singlePageMode === 'create' ? singleCreatePageRoute : undefined,
+        createPageTitle: singlePageMode === 'create' ? singleCreatePageTitle : undefined,
+        moduleMode: singleModuleMode,
+        moduleId: singleModuleMode === 'existing' ? singleModuleId : undefined,
+        createModuleName: singleModuleMode === 'create' ? singleCreateModuleName : undefined
+      };
+    }
+
+    const items = Object.entries(perKeyAssign)
+      .filter(([, v]) => v.pageId)
+      .map(([key, v]) => ({ key, pageId: v.pageId, moduleId: v.moduleId }));
+
+    return { mode: 'per_key', scope: effectiveScope, items };
+  }, [
+    bindMode,
+    effectiveScope,
+    perKeyAssign,
+    singleCreateModuleName,
+    singleCreatePageRoute,
+    singleCreatePageTitle,
+    singleModuleId,
+    singleModuleMode,
+    singlePageId,
+    singlePageMode
+  ]);
+
+  const bindValidationError = useMemo(() => {
+    if (bindMode === 'off') return null;
+    if (!importPreview) return null;
+    if (!contextLoaded && contextBusy) return '正在加载页面/模块，请稍后…';
+
+    if (effectiveScope === 'new_only' && importPreview.kind === 'source' && importPreview.summary.added === 0) {
+      return '本次导入没有新增词条，无需设置“新增词条归属”。如需补充已存在词条的归属，请切换为“包含已存在词条”。';
+    }
+
+    if (bindMode === 'single') {
+      if (singlePageMode === 'existing') {
+        if (!contextLoaded) return '页面/模块尚未加载，请稍后或重试。';
+        if (!singlePageId) return '请选择页面。';
+      } else {
+        if (!singleCreatePageRoute.trim()) return '请输入新建页面路由/标识。';
+      }
+
+      if (singleModuleMode === 'existing' && !singleModuleId) return '请选择模块。';
+      if (singleModuleMode === 'create' && !singleCreateModuleName.trim()) return '请输入新建模块名称。';
+    }
+
+    return null;
+  }, [
+    bindMode,
+    contextBusy,
+    contextLoaded,
+    effectiveScope,
+    importPreview,
+    singleCreateModuleName,
+    singleCreatePageRoute,
+    singleModuleId,
+    singleModuleMode,
+    singlePageId,
+    singlePageMode
+  ]);
+
+  const canConfirmImport =
+    canManage &&
+    importStage === 'parsed' &&
+    hasActionableChanges &&
+    !importBusy &&
+    !bindValidationError;
+
+  const showBindPlanInUpdated =
+    importPreview?.kind === 'target' || (importPreview?.kind === 'source' && importPreview.summary.added === 0);
+
+  const bindPlanPanel = importPreview ? (
+    <div className="rounded-md border bg-background p-4">
+      <div className="space-y-1">
+        <div className="text-sm font-semibold text-foreground">页面归属（可选）</div>
+        <div className="text-sm text-muted-foreground">把本次导入的词条关联到页面/模块，方便后续按页面维护。</div>
+      </div>
+
+      <div className="mt-4 space-y-4">
+        <div className="grid gap-3 lg:grid-cols-3">
+          <div className="space-y-2">
+            <Label>归属方式</Label>
+            <Select
+              value={bindMode}
+              onValueChange={(v) => setBindMode(v as typeof bindMode)}
+              placeholder="选择归属方式"
+              options={[
+                { value: 'off', label: '不设置归属' },
+                { value: 'single', label: '统一归属到同一页面/模块' },
+                { value: 'per_key', label: '为不同词条分配归属' }
+              ]}
+              className="h-10 w-full justify-between"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>适用范围</Label>
+            <Select
+              value={effectiveScope}
+              onValueChange={(v) => setBindScope(v as typeof bindScope)}
+              placeholder="选择适用范围"
+              options={[
+                { value: 'new_only', label: '仅本次新增词条（推荐）' },
+                { value: 'all', label: '包含已存在词条（可选）' }
+              ]}
+              disabled={importPreview?.kind === 'target'}
+              className="h-10 w-full justify-between"
+            />
+            {importPreview?.kind === 'target' ? (
+              <div className="text-xs text-muted-foreground">目标语言导入不会新增词条，如需归属，等同于“包含已存在词条”。</div>
+            ) : null}
+          </div>
+          <div className="rounded-md border bg-card p-3 text-xs text-muted-foreground">
+            默认只为新增词条设置归属；未分配的词条也可稍后在页面/模块里再关联。
+          </div>
+        </div>
+
+        {bindMode !== 'off' ? (
+          <div className="space-y-3">
+            {contextError ? (
+              <div className="rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm text-destructive">
+                {contextError}
+              </div>
+            ) : null}
+
+            {(() => {
+              if (!contextLoaded && contextBusy) {
+                return (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    加载页面/模块…
+                  </div>
+                );
+              }
+
+              if (!contextLoaded) {
+                return (
+                  <div className="rounded-md border bg-background p-3 text-sm text-muted-foreground">
+                    页面/模块信息尚未加载完成，稍后会自动展示归属选项。
+                  </div>
+                );
+              }
+
+              if (bindMode === 'single') {
+                return (
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>页面来源</Label>
+                        <Select
+                          value={singlePageMode}
+                          onValueChange={(v) => {
+                            setSinglePageMode(v as typeof singlePageMode);
+                            setSinglePageId('');
+                            setSingleCreatePageRoute('');
+                            setSingleCreatePageTitle('');
+                            setSingleModuleId('');
+                            setSingleCreateModuleName('');
+                          }}
+                          placeholder="选择页面来源"
+                          options={[
+                            { value: 'existing', label: '选择已有页面' },
+                            { value: 'create', label: '导入时新建页面' }
+                          ]}
+                          className="h-10 w-full justify-between"
+                        />
+                      </div>
+                      {singlePageMode === 'existing' ? (
+                        <div className="space-y-2">
+                          <Label>页面</Label>
+                          <Select
+                            value={singlePageId}
+                            onValueChange={(v) => {
+                              setSinglePageId(v);
+                              setSingleModuleId('');
+                            }}
+                            placeholder={contextPages.length ? '选择页面' : '暂无页面'}
+                            options={pageOptions}
+                            disabled={contextPages.length === 0}
+                            className="h-10 w-full justify-between"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label>新建页面路由/标识</Label>
+                          <Input
+                            value={singleCreatePageRoute}
+                            onChange={(e) => setSingleCreatePageRoute(e.target.value)}
+                            placeholder="例如 /order 或 order"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {singlePageMode === 'create' ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>页面标题（可选）</Label>
+                          <Input
+                            value={singleCreatePageTitle}
+                            onChange={(e) => setSingleCreatePageTitle(e.target.value)}
+                            placeholder="例如 订单页"
+                          />
+                        </div>
+                        <div className="rounded-md border bg-background p-3 text-xs text-muted-foreground">
+                          页面会在“确认导入”时创建；若路由重复将提示冲突。
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>模块（可选）</Label>
+                        <Select
+                          value={singleModuleMode}
+                          onValueChange={(v) => {
+                            setSingleModuleMode(v as typeof singleModuleMode);
+                            setSingleModuleId('');
+                            setSingleCreateModuleName('');
+                          }}
+                          placeholder="选择模块设置"
+                          options={[
+                            { value: 'none', label: '不设置模块（仅归属到页面）' },
+                            { value: 'existing', label: '选择已有模块' },
+                            { value: 'create', label: '导入时新建模块' }
+                          ]}
+                          className="h-10 w-full justify-between"
+                        />
+                      </div>
+
+                      {singleModuleMode === 'existing' ? (
+                        <div className="space-y-2">
+                          <Label>模块</Label>
+                          <Select
+                            value={singleModuleId}
+                            onValueChange={setSingleModuleId}
+                            placeholder={singlePageId ? '选择模块' : singlePageMode === 'create' ? '新建页面后再选择模块' : '先选择页面'}
+                            options={getModuleOptionsByPageId(singlePageId)}
+                            disabled={!singlePageId || getModuleOptionsByPageId(singlePageId).length === 0}
+                            className="h-10 w-full justify-between"
+                          />
+                        </div>
+                      ) : singleModuleMode === 'create' ? (
+                        <div className="space-y-2">
+                          <Label>新建模块名称</Label>
+                          <Input
+                            value={singleCreateModuleName}
+                            onChange={(e) => setSingleCreateModuleName(e.target.value)}
+                            placeholder="例如 Header / Main / Footer"
+                          />
+                        </div>
+                      ) : (
+                        <div className="rounded-md border bg-background p-3 text-xs text-muted-foreground">
+                          不设置模块时，会将词条归属到所选页面。
+                        </div>
+                      )}
+                    </div>
+
+                    {contextPages.length === 0 && singlePageMode === 'existing' ? (
+                      <div className="rounded-md border bg-card p-3 text-sm text-muted-foreground">
+                        项目尚未建立页面/模块结构；可切换为“导入时新建页面”，或先创建页面/模块后再回来导入。
+                        <div className="mt-2">
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/projects/${projectId}/context`}>前往页面/模块管理</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {effectiveScope === 'new_only' && importPreview?.kind === 'source' && importPreview.summary.added === 0 ? (
+                    <div className="rounded-md border bg-background p-3 text-sm text-muted-foreground">
+                      本次导入没有新增词条；如需补充已存在词条的归属，请切换为“包含已存在词条”。
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="grid w-full gap-3 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>批量页面</Label>
+                        <Select
+                          value={perKeyBulkPageId}
+                          onValueChange={(v) => {
+                            setPerKeyBulkPageId(v);
+                            setPerKeyBulkModuleId('');
+                          }}
+                          placeholder="选择页面"
+                          options={pageOptions}
+                          className="h-10 w-full justify-between"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>批量模块（可选）</Label>
+                        <Select
+                          value={perKeyBulkModuleId || undefined}
+                          onValueChange={(v) => setPerKeyBulkModuleId(v)}
+                          placeholder="不选择模块"
+                          options={getModuleOptionsByPageId(perKeyBulkPageId)}
+                          disabled={!perKeyBulkPageId || getModuleOptionsByPageId(perKeyBulkPageId).length === 0}
+                          className="h-10 w-full justify-between"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>搜索</Label>
+                        <Input value={perKeyQuery} onChange={(e) => setPerKeyQuery(e.target.value)} placeholder="搜索 key / 文案" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 lg:justify-end">
+                      <div className="text-sm text-muted-foreground">
+                        已分配 {perKeyAssignedCount} / {perKeyCandidates.length}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!perKeyBulkPageId || perKeySelected.length === 0}
+                        onClick={() => {
+                          setPerKeyAssign((prev) => {
+                            const next = { ...prev };
+                            for (const key of perKeySelected) {
+                              next[key] = {
+                                pageId: perKeyBulkPageId,
+                                moduleId: perKeyBulkModuleId || undefined
+                              };
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        应用到已选（{perKeySelected.length}）
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border">
+                    <Table
+                      columns={[
+                        {
+                          key: 'select',
+                          title: (
+                            <Checkbox
+                              checked={
+                                perKeyPagination.pageItems.length > 0 &&
+                                perKeyPagination.pageItems.every((it) => perKeySelected.includes(it.key))
+                              }
+                              onCheckedChange={(checked) => {
+                                const keys = perKeyPagination.pageItems.map((it) => it.key);
+                                setPerKeySelected((prev) => {
+                                  const set = new Set(prev);
+                                  if (checked) keys.forEach((k) => set.add(k));
+                                  else keys.forEach((k) => set.delete(k));
+                                  return Array.from(set);
+                                });
+                              }}
+                            />
+                          ),
+                          headerClassName: 'bg-card px-3 py-2 text-left font-medium text-muted-foreground',
+                          cellClassName: 'px-3 py-2 align-top',
+                          render: (_value: unknown, record: any) => (
+                            <Checkbox
+                              checked={perKeySelected.includes(record.key)}
+                              onCheckedChange={(checked) => {
+                                setPerKeySelected((prev) => {
+                                  const set = new Set(prev);
+                                  if (checked) set.add(record.key);
+                                  else set.delete(record.key);
+                                  return Array.from(set);
+                                });
+                              }}
+                            />
+                          )
+                        },
+                        {
+                          key: 'key',
+                          title: '词条标识',
+                          headerClassName: 'bg-card px-3 py-2 text-left font-medium text-muted-foreground',
+                          cellClassName: 'px-3 py-2 align-top',
+                          render: (_value: unknown, record: any) => (
+                            <code className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground">
+                              {record.key}
+                            </code>
+                          )
+                        },
+                        {
+                          key: 'text',
+                          title: isSource ? '原文' : '翻译内容',
+                          headerClassName: 'bg-card px-3 py-2 text-left font-medium text-muted-foreground',
+                          cellClassName: 'px-3 py-2 align-top text-foreground',
+                          render: (_value: unknown, record: any) => (
+                            <div className="max-w-[420px] break-words">{record.text || '—'}</div>
+                          )
+                        },
+                        {
+                          key: 'page',
+                          title: '页面',
+                          headerClassName: 'bg-card px-3 py-2 text-left font-medium text-muted-foreground',
+                          cellClassName: 'px-3 py-2 align-top',
+                          render: (_value: unknown, record: any) => (
+                            <Select
+                              value={perKeyAssign[record.key]?.pageId || undefined}
+                              onValueChange={(v) => {
+                                setPerKeyAssign((prev) => ({
+                                  ...prev,
+                                  [record.key]: { pageId: v }
+                                }));
+                              }}
+                              placeholder="选择页面"
+                              options={pageOptions}
+                              className="h-9 w-[260px] justify-between"
+                            />
+                          )
+                        },
+                        {
+                          key: 'module',
+                          title: '模块（可选）',
+                          headerClassName: 'bg-card px-3 py-2 text-left font-medium text-muted-foreground',
+                          cellClassName: 'px-3 py-2 align-top',
+                          render: (_value: unknown, record: any) => {
+                            const pageId = perKeyAssign[record.key]?.pageId || '';
+                            const options = getModuleOptionsByPageId(pageId);
+                            return (
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={perKeyAssign[record.key]?.moduleId || undefined}
+                                  onValueChange={(v) => {
+                                    setPerKeyAssign((prev) => ({
+                                      ...prev,
+                                      [record.key]: { ...prev[record.key], moduleId: v }
+                                    }));
+                                  }}
+                                  placeholder="不选择模块"
+                                  options={options}
+                                  disabled={!pageId || options.length === 0}
+                                  className="h-9 w-[220px] justify-between"
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2"
+                                  disabled={!perKeyAssign[record.key]?.moduleId}
+                                  onClick={() => {
+                                    setPerKeyAssign((prev) => ({
+                                      ...prev,
+                                      [record.key]: { ...prev[record.key], moduleId: undefined }
+                                    }));
+                                  }}
+                                >
+                                  清除
+                                </Button>
+                              </div>
+                            );
+                          }
+                        }
+                      ]}
+                      data={perKeyPagination.pageItems as any[]}
+                      rowKey="key"
+                      emptyText={effectiveScope === 'new_only' ? '本次没有可分配归属的新增词条' : '暂无可分配项'}
+                    />
+                  </div>
+                  <Pagination
+                    page={perKeyPagination.page}
+                    pageCount={perKeyPagination.pageCount}
+                    total={perKeyPagination.filteredTotal}
+                    onChange={perKeyPagination.setPage}
+                  />
+                </div>
+              );
+            })()}
+
+            {bindValidationError ? (
+              <div className="rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm text-destructive">
+                {bindValidationError}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-4">
@@ -1067,19 +1548,16 @@ export function ImportTabContent({
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
-            <div className="text-sm font-semibold text-foreground">导入上下文</div>
+            <div className="text-sm font-semibold text-foreground">导入语言包（JSON）</div>
             <div className="text-sm text-muted-foreground">
-              当前语言：{selectedLocale} <Badge variant={isSource ? 'secondary' : 'outline'}>{isSource ? '源语言' : '目标语言'}</Badge>
+              当前语言：{selectedLocale}{' '}
+              <Badge variant={isSource ? 'secondary' : 'outline'}>{isSource ? '默认语言' : '翻译语言'}</Badge>
             </div>
-            <div className="text-sm text-muted-foreground">结构支持扁平或树形；系统以叶子节点路径作为词条 key（例如 order.title）。</div>
-            <div className="text-sm text-muted-foreground">value 必须为字符串；树形 JSON 不支持数组；key 去除首尾空格后为空或冲突会导致解析失败。</div>
             {isSource ? (
-              <div className="text-sm text-muted-foreground">
-                源语言导入：允许新增 key、允许更新源文案；仅处理导入文件中出现的 key，未出现的 key 不会删除或变更。
-              </div>
+              <div className="text-sm text-muted-foreground">会新增新词条并更新已有原文；不会删除未出现在文件里的词条。</div>
             ) : (
               <div className="text-sm text-muted-foreground">
-                目标语言导入：仅更新已存在 key 的译文，不会新增词条；源语言不存在的 key 会显示在「忽略」中且不会写入；空白值会跳过，不会清空现有译文；与现有译文一致视为无变更。
+                只更新已存在词条的翻译内容；不会新增词条；空白值会跳过，不会清空已有翻译。
               </div>
             )}
           </div>
@@ -1126,192 +1604,6 @@ export function ImportTabContent({
         ) : null}
       </div>
 
-      <div className="rounded-lg border bg-card p-4">
-        <div className="space-y-1">
-          <div className="text-sm font-semibold text-foreground">归属设置</div>
-          <div className="text-sm text-muted-foreground">可在导入时把本次导入涉及的词条直接关联到页面/模块。</div>
-          {bindHint ? <div className="text-sm text-muted-foreground">{bindHint}</div> : null}
-          {bindCountHint ? <div className="text-sm text-muted-foreground">{bindCountHint}</div> : null}
-        </div>
-
-        <div className="mt-4 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>自动绑定</Label>
-              <Select
-                value={bindLevel}
-                onValueChange={(v) => onBindLevelChange(v as typeof bindLevel)}
-                placeholder="选择绑定方式"
-                options={[
-                  { value: 'off', label: '不绑定（仅导入词条/译文）' },
-                  { value: 'page', label: '绑定到页面' },
-                  { value: 'module', label: '绑定到页面 + 模块' }
-                ]}
-                className="h-10 w-full justify-between"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>绑定范围</Label>
-              <Select
-                value={bindMode}
-                onValueChange={(v) => onBindModeChange(v as typeof bindMode)}
-                placeholder="选择范围"
-                options={[
-                  { value: 'all', label: '导入文件中的所有 key（推荐）' },
-                  { value: 'addedOnly', label: '仅新增 key（避免误绑定共享词条）' }
-                ]}
-                disabled={!isSource}
-                className="h-10 w-full justify-between"
-              />
-              {!isSource ? <div className="text-xs text-muted-foreground">目标语言导入不会新增 key，仅支持“所有 key”。</div> : null}
-            </div>
-          </div>
-
-          {bindLevel !== 'off' ? (
-            <div className="space-y-3">
-              {contextError ? (
-                <div className="rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm text-destructive">
-                  {contextError}
-                </div>
-              ) : null}
-
-              {!contextLoaded && contextBusy ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  加载页面/模块…
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>页面来源</Label>
-                      <Select
-                        value={pageMode}
-                        onValueChange={(v) => onPageModeChange(v as typeof pageMode)}
-                        placeholder="选择页面来源"
-                        options={[
-                          { value: 'existing', label: '选择已有页面' },
-                          { value: 'create', label: '导入时新建页面' }
-                        ]}
-                        className="h-10 w-full justify-between"
-                      />
-                    </div>
-                    {pageMode === 'existing' ? (
-                      <div className="space-y-2">
-                        <Label>页面</Label>
-                        <Select
-                          value={pageId}
-                          onValueChange={(v) => {
-                            onPageIdChange(v);
-                            onModuleIdChange('');
-                          }}
-                          placeholder={contextPages.length ? '选择页面' : '暂无页面'}
-                          options={contextPages.map((p) => ({
-                            value: String(p.id),
-                            label: p.title ? `${p.title} · ${p.route}` : p.route
-                          }))}
-                          disabled={contextPages.length === 0}
-                          className="h-10 w-full justify-between"
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Label>新建页面路由/标识</Label>
-                        <Input
-                          value={createPageRoute}
-                          onChange={(e) => onCreatePageRouteChange(e.target.value)}
-                          placeholder="例如 /order 或 order"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {pageMode === 'create' ? (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>页面标题（可选）</Label>
-                        <Input
-                          value={createPageTitle}
-                          onChange={(e) => onCreatePageTitleChange(e.target.value)}
-                          placeholder="例如 订单页"
-                        />
-                      </div>
-                      <div className="rounded-md border bg-background p-3 text-xs text-muted-foreground">
-                        页面会在“确认导入”时创建；若路由重复将提示冲突。
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {bindLevel === 'module' ? (
-                    <div className="space-y-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>模块来源</Label>
-                          <Select
-                            value={moduleMode}
-                            onValueChange={(v) => onModuleModeChange(v as typeof moduleMode)}
-                            placeholder="选择模块来源"
-                            options={[
-                              { value: 'existing', label: '选择已有模块' },
-                              { value: 'create', label: '导入时新建模块' }
-                            ]}
-                            className="h-10 w-full justify-between"
-                          />
-                        </div>
-                        {moduleMode === 'existing' ? (
-                          <div className="space-y-2">
-                            <Label>模块</Label>
-                            <Select
-                              value={moduleId}
-                              onValueChange={onModuleIdChange}
-                              placeholder={selectedPage ? '选择模块' : pageMode === 'create' ? '新建页面后再选择模块' : '先选择页面'}
-                              options={moduleOptions}
-                              disabled={!selectedPage || moduleOptions.length === 0}
-                              className="h-10 w-full justify-between"
-                            />
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label>新建模块名称</Label>
-                            <Input
-                              value={createModuleName}
-                              onChange={(e) => onCreateModuleNameChange(e.target.value)}
-                              placeholder="例如 Header / Main / Footer"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {contextPages.length === 0 && pageMode === 'existing' ? (
-                    <div className="rounded-md border bg-card p-3 text-sm text-muted-foreground">
-                      项目尚未建立页面/模块结构；可切换为“导入时新建页面”，或前往 06 创建页面/模块后再回来导入。
-                      <div className="mt-2">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/projects/${projectId}/context`}>前往 06 页面/上下文</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-
-              {bindValidationError ? (
-                <div className="rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm text-destructive">
-                  {bindValidationError}
-                </div>
-              ) : null}
-              {bindWarning ? (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
-                  {bindWarning}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
       {importPreview ? (
         <div className="rounded-lg border bg-card p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1321,8 +1613,8 @@ export function ImportTabContent({
             </div>
             <Button
               type="button"
-              disabled={importBusy || importStage !== 'parsed' || !canManage || !hasActionableChanges || !canConfirm}
-              onClick={onConfirm}
+              disabled={!canConfirmImport}
+              onClick={() => onConfirm(bindPlan)}
             >
               {importBusy ? <Loader2 className="animate-spin" /> : null}
               确认导入
@@ -1342,7 +1634,12 @@ export function ImportTabContent({
                           </span>
                         ),
                         disabled: importPreview.summary.added === 0,
-                        content: <PreviewTable kind="added" items={importPreview.added} emptyText="无新增项" />
+                        content: (
+                          <div className="space-y-4">
+                            {bindPlanPanel}
+                            <PreviewTable kind="added" items={importPreview.added} emptyText="无新增项" />
+                          </div>
+                        )
                       },
                       {
                         value: 'updated',
@@ -1352,7 +1649,14 @@ export function ImportTabContent({
                           </span>
                         ),
                         disabled: importPreview.summary.updated === 0,
-                        content: <PreviewTable kind="updated" items={importPreview.updated} emptyText="无修改项" />
+                        content: showBindPlanInUpdated ? (
+                          <div className="space-y-4">
+                            {bindPlanPanel}
+                            <PreviewTable kind="updated" items={importPreview.updated} emptyText="无修改项" />
+                          </div>
+                        ) : (
+                          <PreviewTable kind="updated" items={importPreview.updated} emptyText="无修改项" />
+                        )
                       }
                     ] as const)
                   : ([
@@ -1364,7 +1668,12 @@ export function ImportTabContent({
                           </span>
                         ),
                         disabled: importPreview.summary.updated === 0,
-                        content: <PreviewTable kind="updated" items={importPreview.updated} emptyText="无修改项" />
+                        content: (
+                          <div className="space-y-4">
+                            {bindPlanPanel}
+                            <PreviewTable kind="updated" items={importPreview.updated} emptyText="无修改项" />
+                          </div>
+                        )
                       },
                       ...(importPreview.summary.ignored > 0
                         ? ([
@@ -1402,6 +1711,24 @@ export function ImportTabContent({
     </div>
   );
 }
+
+export type ImportBindPlanDraft =
+  | {
+      mode: 'single';
+      scope: 'new_only' | 'all';
+      pageMode: 'existing' | 'create';
+      pageId?: string;
+      createPageRoute?: string;
+      createPageTitle?: string;
+      moduleMode: 'none' | 'existing' | 'create';
+      moduleId?: string;
+      createModuleName?: string;
+    }
+  | {
+      mode: 'per_key';
+      scope: 'new_only' | 'all';
+      items: Array<{ key: string; pageId: string; moduleId?: string }>;
+    };
 
 export function HistoryTabContent({
   historyQuery,

@@ -10,9 +10,9 @@ async function main() {
   const prisma = new PrismaClient();
   const db = prisma as any;
   try {
-    const adminEmail = `${makeId('admin')}@example.com`;
+    const adminAccount = `${makeId('admin')}`;
     const admin = await prisma.user.create({
-      data: { email: adminEmail, passwordHash: 'x', role: 'member', isSystemAdmin: false }
+      data: { account: adminAccount, passwordHash: 'x', role: 'member', isSystemAdmin: false }
     });
 
     const project = await prisma.project.create({

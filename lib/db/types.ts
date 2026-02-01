@@ -14,7 +14,7 @@ export type ActivityLog = PrismaActivityLog;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
-    user: Pick<User, 'id' | 'name' | 'email'>;
+    user: Pick<User, 'id' | 'name' | 'account'>;
   })[];
 };
 
@@ -30,4 +30,3 @@ export enum ActivityType {
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION'
 }
-

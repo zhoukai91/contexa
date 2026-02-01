@@ -7,7 +7,7 @@ import { ProjectMembersManager } from './members-manager';
 
 type MemberRowData = {
   userId: number;
-  email: string;
+  account: string;
   name: string | null;
   role: string;
   canReview: boolean;
@@ -16,7 +16,7 @@ type MemberRowData = {
 
 type InvitationRowData = {
   id: number;
-  email: string;
+  account: string;
   role: string;
   canReview: boolean;
   status: string;
@@ -25,7 +25,7 @@ type InvitationRowData = {
 
 type UserOption = {
   id: number;
-  email: string;
+  account: string;
   name: string | null;
 };
 

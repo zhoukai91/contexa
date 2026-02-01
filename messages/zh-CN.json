@@ -33,16 +33,17 @@
     "adminLimitReached": "已达到最多 5 个系统管理员的提升上限",
     "signInFailed": "账号或密码不正确，请重试。",
     "onlySystemAdminCreateProject": "仅系统管理员可创建项目",
-    "createProjectFailed": "创建项目失败，请检查项目名是否已存在",
+    "createProjectNameExists": "项目名已存在，请更换后重试。",
+    "createProjectFailed": "创建项目失败，请稍后重试。",
     "switchLocaleFailed": "切换语言失败，请稍后重试。"
   },
   "validations": {
     "passwordMin": "密码至少 6 位",
     "passwordMax": "密码最多 100 位",
-    "passwordPattern": "密码仅支持字母、数字、.、@",
+    "passwordPattern": "密码不限制字符",
     "accountMax": "账号最多 255 位",
-    "accountPattern": "账号仅支持字母、数字、.、@",
-    "accountMin": "账号至少 6 位",
+    "accountPattern": "账号仅支持字母、数字、_、-、.、@",
+    "accountMin": "账号至少 3 位",
     "projectNameRequired": "项目名必填",
     "projectNameMax": "项目名最多 100 个字符",
     "projectDescMax": "描述最多 2000 个字符",
@@ -247,10 +248,11 @@
       "status": "状态筛选"
     },
     "status": {
-      "untranslated": "未翻译",
-      "pendingReview": "待审核",
-      "updated": "有更新",
-      "approved": "已审校"
+      "pending": "待翻译",
+      "needs_update": "待更新",
+      "needs_review": "待核对",
+      "ready": "待定版",
+      "approved": "已定版"
     },
     "aiBadge": {
       "needEngine": "需启用 AI 引擎",
@@ -282,7 +284,7 @@
     },
     "toast": {
       "savedTitle": "已保存",
-      "savedMessage": "译文已更新，状态已变更为待审核。",
+      "savedMessage": "译文已更新，状态已变更为待定版。",
       "invalidTitle": "无法保存",
       "invalidEmpty": "目标文案不能为空。",
       "approvedTitle": "已标记审校",
@@ -577,8 +579,8 @@
     "addSubtitle": "从系统用户中选择成员加入，并分配项目内角色。",
     "user": "用户",
     "userPlaceholder": "请选择用户",
-    "email": "邮箱",
-    "emailPlaceholder": "请输入邮箱",
+    "email": "账号",
+    "emailPlaceholder": "请输入账号",
     "role": "角色",
     "canReview": "可审核",
     "add": "添加",

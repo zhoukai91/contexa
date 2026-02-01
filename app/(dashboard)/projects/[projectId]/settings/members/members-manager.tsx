@@ -13,7 +13,7 @@ import { addProjectMemberAction, removeProjectMemberAction, updateProjectMemberA
 
 type MemberRowData = {
   userId: number;
-  email: string;
+  account: string;
   name: string | null;
   role: string;
   canReview: boolean;
@@ -22,7 +22,7 @@ type MemberRowData = {
 
 type InvitationRowData = {
   id: number;
-  email: string;
+  account: string;
   role: string;
   canReview: boolean;
   status: string;
@@ -31,7 +31,7 @@ type InvitationRowData = {
 
 type UserOption = {
   id: number;
-  email: string;
+  account: string;
   name: string | null;
 };
 
@@ -46,7 +46,7 @@ function normalizeProjectRole(role: string): ProjectRoleValue {
 }
 
 function getUserLabel(user: UserOption) {
-  return user.name ? user.name : user.email;
+  return user.name ? user.name : user.account;
 }
 
 function RoleSelect({
@@ -126,14 +126,14 @@ function MemberRow({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="font-medium text-foreground truncate">
-            {row.name || row.email}
+            {row.name || row.account}
             {isCreator ? (
               <span className="ml-2 text-xs text-muted-foreground">
                 {t('creatorBadge')}
               </span>
             ) : null}
           </div>
-          <div className="text-sm text-muted-foreground truncate">{row.email}</div>
+          <div className="text-sm text-muted-foreground truncate">{row.account}</div>
         </div>
         <div className="text-sm text-muted-foreground shrink-0">{row.createdAt}</div>
       </div>
@@ -323,7 +323,7 @@ export function ProjectMembersManager({
                 className="border border-border rounded-xl bg-card p-4 text-sm flex items-start justify-between gap-4"
               >
                 <div className="min-w-0">
-                  <div className="font-medium text-foreground truncate">{inv.email}</div>
+                  <div className="font-medium text-foreground truncate">{inv.account}</div>
                   <div className="mt-1 text-muted-foreground">
                     {t('invitedAs')}：
                     {normalizeProjectRole(inv.role) === ProjectRoles.admin

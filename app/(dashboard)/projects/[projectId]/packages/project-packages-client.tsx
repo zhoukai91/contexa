@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card-primitives';
 import { DropdownMenu } from '@/components/ui/dropdown-menu';
-import { Table, type TableColumn } from '@/components/ui/table';
+import { type TableColumn } from '@/components/ui/table';
 import { Tabs } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast';
 import { parseLanguagePack } from '@/lib/packages/language-pack-parser';
@@ -36,12 +36,12 @@ import {
   HistoryDetailSheet,
   HistoryTabContent,
   ImportTabContent,
+  type ImportBindPlanDraft,
   type ImportPreview,
   type DownloadMode,
   type TabKey,
   type TranslationStatus,
   PlacementsDialog,
-  PreviewTable,
   randomShortId,
   StatusPill,
   useSearchPagination
@@ -54,6 +54,7 @@ export function ProjectPackagesClient({
   templateShape,
   canManage,
   initialEntries,
+  initialTab,
   bootstrapError,
   entriesError
 }: {
@@ -63,12 +64,13 @@ export function ProjectPackagesClient({
   templateShape: 'flat' | 'tree';
   canManage: boolean;
   initialEntries: PackagesEntry[];
+  initialTab?: TabKey;
   bootstrapError: string;
   entriesError: string;
 }) {
   const { push } = useToast();
   const importFileRef = useRef<HTMLInputElement | null>(null);
-  const [tab, setTab] = useState<TabKey>('entries');
+  const [tab, setTab] = useState<TabKey>(() => initialTab ?? 'entries');
   const [selectedLocale, setSelectedLocale] = useState(sourceLocale);
   const [query, setQuery] = useState('');
 
@@ -95,16 +97,8 @@ export function ProjectPackagesClient({
   const [importFileSize, setImportFileSize] = useState<number | null>(null);
   const [importRawJson, setImportRawJson] = useState('');
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importMap, setImportMap] = useState<Record<string, string> | null>(null);
   const [previewTab, setPreviewTab] = useState<'added' | 'updated' | 'ignored'>('added');
-  const [importBindLevel, setImportBindLevel] = useState<'off' | 'page' | 'module'>('off');
-  const [importBindMode, setImportBindMode] = useState<'all' | 'addedOnly'>('all');
-  const [importPageMode, setImportPageMode] = useState<'existing' | 'create'>('existing');
-  const [importPageId, setImportPageId] = useState('');
-  const [importCreatePageRoute, setImportCreatePageRoute] = useState('');
-  const [importCreatePageTitle, setImportCreatePageTitle] = useState('');
-  const [importModuleMode, setImportModuleMode] = useState<'existing' | 'create'>('existing');
-  const [importModuleId, setImportModuleId] = useState('');
-  const [importCreateModuleName, setImportCreateModuleName] = useState('');
   const [lastImportContextLink, setLastImportContextLink] = useState<string | null>(null);
 
   const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -147,115 +141,6 @@ export function ProjectPackagesClient({
   }, [entries]);
 
   const isSource = selectedLocale === sourceLocale;
-  useEffect(() => {
-    if (isSource) return;
-    if (importBindMode !== 'all') setImportBindMode('all');
-  }, [importBindMode, isSource]);
-
-  const importBindValidationError = useMemo(() => {
-    if (importBindLevel === 'off') return null;
-    if (!contextLoaded && contextBusy) return '正在加载页面/模块，请稍后…';
-    if (importPageMode === 'existing') {
-      if (!contextLoaded) return '页面/模块尚未加载，请稍后或重试。';
-      if (!importPageId) return '请选择页面。';
-    } else {
-      if (!importCreatePageRoute.trim()) return '请输入新建页面路由/标识。';
-    }
-
-    if (importBindLevel === 'module') {
-      if (importModuleMode === 'existing') {
-        if (!importModuleId) return '请选择模块。';
-      } else {
-        if (!importCreateModuleName.trim()) return '请输入新建模块名称。';
-      }
-    }
-
-    return null;
-  }, [
-    contextBusy,
-    contextLoaded,
-    importBindLevel,
-    importCreateModuleName,
-    importCreatePageRoute,
-    importModuleId,
-    importModuleMode,
-    importPageId,
-    importPageMode
-  ]);
-
-  const canConfirmImport = !importBindValidationError;
-  const importBindWarning = useMemo(() => {
-    if (importBindLevel === 'off') return null;
-    if (!importPreview) return null;
-    if (isSource && importBindMode === 'addedOnly') return null;
-    if (importPreview.existingTotal < 50) return null;
-    if (importPreview.existingTotal === 0) return null;
-    const ratio = importPreview.existingWithPlacements / importPreview.existingTotal;
-    if (ratio < 0.6) return null;
-    return `提示：导入文件中已有 ${importPreview.existingTotal} 条 key，其中 ${importPreview.existingWithPlacements} 条已在其他页面/模块出现。若这是“页面专属文案”导入，建议改用“仅新增 key”，或检查是否混入共享词条。`;
-  }, [importBindLevel, importBindMode, importPreview, isSource]);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(`tms:packages:import-context:${projectId}`);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as Partial<{
-        bindLevel: 'off' | 'page' | 'module';
-        bindMode: 'all' | 'addedOnly';
-        pageMode: 'existing' | 'create';
-        pageId: string;
-        createPageRoute: string;
-        createPageTitle: string;
-        moduleMode: 'existing' | 'create';
-        moduleId: string;
-        createModuleName: string;
-      }>;
-      if (saved.bindLevel) setImportBindLevel(saved.bindLevel);
-      if (saved.bindMode) setImportBindMode(saved.bindMode);
-      if (saved.pageMode) setImportPageMode(saved.pageMode);
-      if (typeof saved.pageId === 'string') setImportPageId(saved.pageId);
-      if (typeof saved.createPageRoute === 'string') setImportCreatePageRoute(saved.createPageRoute);
-      if (typeof saved.createPageTitle === 'string') setImportCreatePageTitle(saved.createPageTitle);
-      if (saved.moduleMode) setImportModuleMode(saved.moduleMode);
-      if (typeof saved.moduleId === 'string') setImportModuleId(saved.moduleId);
-      if (typeof saved.createModuleName === 'string') setImportCreateModuleName(saved.createModuleName);
-    } catch {}
-  }, [projectId]);
-
-  useEffect(() => {
-    try {
-      const key = `tms:packages:import-context:${projectId}`;
-      if (importBindLevel === 'off') {
-        window.localStorage.removeItem(key);
-        return;
-      }
-      window.localStorage.setItem(
-        key,
-        JSON.stringify({
-          bindLevel: importBindLevel,
-          bindMode: importBindMode,
-          pageMode: importPageMode,
-          pageId: importPageId,
-          createPageRoute: importCreatePageRoute,
-          createPageTitle: importCreatePageTitle,
-          moduleMode: importModuleMode,
-          moduleId: importModuleId,
-          createModuleName: importCreateModuleName
-        })
-      );
-    } catch {}
-  }, [
-    importBindLevel,
-    importBindMode,
-    importCreateModuleName,
-    importCreatePageRoute,
-    importCreatePageTitle,
-    importModuleId,
-    importModuleMode,
-    importPageId,
-    importPageMode,
-    projectId
-  ]);
   const currentLocaleStats = useMemo(() => {
     const total = sortedEntries.length;
     if (isSource) return { total, filled: total, pendingReview: 0, needsUpdate: 0 };
@@ -608,18 +493,6 @@ export function ProjectPackagesClient({
     return selectedPage.modules.map((m) => ({ value: String(m.id), label: m.name }));
   }, [selectedPage]);
 
-  const importSelectedPage = useMemo(() => {
-    if (importPageMode !== 'existing') return null;
-    const id = Number(importPageId);
-    if (!Number.isFinite(id)) return null;
-    return contextPages.find((p) => p.id === id) ?? null;
-  }, [contextPages, importPageId, importPageMode]);
-
-  const importModuleOptions = useMemo(() => {
-    if (!importSelectedPage) return [];
-    return importSelectedPage.modules.map((m) => ({ value: String(m.id), label: m.name }));
-  }, [importSelectedPage]);
-
   useEffect(() => {
     if (!createOpen) return;
     void loadContextNodes();
@@ -627,9 +500,8 @@ export function ProjectPackagesClient({
 
   useEffect(() => {
     if (tab !== 'import') return;
-    if (importBindLevel === 'off') return;
     void loadContextNodes();
-  }, [importBindLevel, tab]);
+  }, [tab]);
 
   useEffect(() => {
     if (!selectedPage) {
@@ -641,32 +513,6 @@ export function ProjectPackagesClient({
     const exists = selectedPage.modules.some((m) => m.id === id);
     if (!exists) setCreateModuleId('');
   }, [createModuleId, selectedPage]);
-
-  useEffect(() => {
-    if (importBindLevel !== 'module') {
-      if (importModuleId) setImportModuleId('');
-      if (importModuleMode !== 'existing') setImportModuleMode('existing');
-      if (importCreateModuleName) setImportCreateModuleName('');
-      return;
-    }
-    if (importPageMode === 'create') return;
-    if (!importSelectedPage && importModuleId) setImportModuleId('');
-    if (!importModuleId) return;
-    const id = Number(importModuleId);
-    if (!Number.isFinite(id)) {
-      setImportModuleId('');
-      return;
-    }
-    const exists = importSelectedPage?.modules.some((m) => m.id === id);
-    if (!exists) setImportModuleId('');
-  }, [
-    importBindLevel,
-    importCreateModuleName,
-    importModuleId,
-    importModuleMode,
-    importPageMode,
-    importSelectedPage
-  ]);
 
   useEffect(() => {
     if (!createOpen) return;
@@ -750,15 +596,16 @@ export function ProjectPackagesClient({
     setImportFileSize(null);
     setImportRawJson('');
     setImportPreview(null);
+    setImportMap(null);
     setPreviewTab('added');
     if (importFileRef.current) importFileRef.current.value = '';
   };
 
-  const buildImportPreview = (rawJson: string): ImportPreview | { error: string } => {
-    const parsed = parseLanguagePack(rawJson);
-    if (!parsed.ok) return { error: parsed.error };
-
-    const incoming = parsed.data.map;
+  const buildImportPreviewFromParsed = (parsed: {
+    shape: 'flat' | 'tree';
+    map: Record<string, string>;
+  }): ImportPreview => {
+    const incoming = parsed.map;
     const incomingKeys = Object.keys(incoming);
     const incomingTotal = incomingKeys.length;
     const existingByKey = new Map(sortedEntries.map((e) => [e.key, e] as const));
@@ -785,7 +632,8 @@ export function ProjectPackagesClient({
 
       return {
         kind: 'source',
-        shape: parsed.data.shape,
+        shape: parsed.shape,
+        incomingKeys,
         incomingTotal,
         existingTotal,
         existingWithPlacements,
@@ -820,7 +668,8 @@ export function ProjectPackagesClient({
 
     return {
       kind: 'target',
-      shape: parsed.data.shape,
+      shape: parsed.shape,
+      incomingKeys,
       incomingTotal,
       existingTotal,
       existingWithPlacements,
@@ -835,56 +684,26 @@ export function ProjectPackagesClient({
     };
   };
 
-  /** Tries to infer page/module hints from a JSON file name (best-effort, non-blocking). */
-  const applyImportFilenameHints = (fileName: string) => {
-    const base = fileName.replace(/\.json$/i, '').trim();
-    if (!base) return;
-    const parts = base.split('.').filter(Boolean);
-    const withoutLocale = parts.filter((p) => p !== selectedLocale && p !== sourceLocale).join('.');
-    const normalized = (withoutLocale || base).replace(/_/g, '-').trim();
-    if (!normalized) return;
-
-    const [pageHint, moduleHint] = normalized.split('-').filter(Boolean);
-
-    if (importBindLevel !== 'off') {
-      if (importPageMode === 'create' && !importCreatePageRoute.trim()) {
-        setImportCreatePageRoute(pageHint ? `/${pageHint}` : `/${normalized}`);
-      }
-      if (importBindLevel === 'module' && importModuleMode === 'create' && !importCreateModuleName.trim() && moduleHint) {
-        setImportCreateModuleName(moduleHint);
-      }
-      if (importPageMode === 'existing' && contextLoaded && !importPageId) {
-        const candidates = contextPages.filter((p) => {
-          if (p.route === normalized) return true;
-          if (p.route === `/${normalized}`) return true;
-          if (pageHint && (p.route === pageHint || p.route === `/${pageHint}`)) return true;
-          return false;
-        });
-        if (candidates.length === 1) {
-          setImportPageId(String(candidates[0].id));
-        }
-      }
-    }
-  };
-
   const handlePickImportFile = async (file: File) => {
     setImportError(null);
     setImportBusy(true);
     setImportStage('idle');
     setImportPreview(null);
+    setImportMap(null);
     setPreviewTab(selectedLocale === sourceLocale ? 'added' : 'updated');
     setImportFileName(file.name);
     setImportFileSize(file.size);
-    applyImportFilenameHints(file.name);
     try {
       const text = await file.text();
       setImportRawJson(text);
-      const preview = buildImportPreview(text);
-      if ('error' in preview) {
-        setImportError(preview.error);
+      const parsed = parseLanguagePack(text);
+      if (!parsed.ok) {
+        setImportError(parsed.error);
         setImportStage('idle');
         return;
       }
+      setImportMap(parsed.data.map);
+      const preview = buildImportPreviewFromParsed({ shape: parsed.data.shape, map: parsed.data.map });
       setPreviewTab(() => {
         if (preview.kind === 'source') return 'added';
         if (preview.summary.updated > 0) return 'updated';
@@ -900,48 +719,57 @@ export function ProjectPackagesClient({
     }
   };
 
-  const handleConfirmImport = async () => {
+  const handleConfirmImport = async (bindPlan: ImportBindPlanDraft | null) => {
     if (!importRawJson.trim()) return;
     if (!importPreview) return;
     if (importPreview.summary.added + importPreview.summary.updated === 0) return;
-    if (importBindValidationError) return;
     setImportError(null);
     setImportBusy(true);
     try {
-      const bind =
-        importBindLevel === 'off'
+      const normalizedBindPlan =
+        !bindPlan
           ? undefined
-          : {
-              enabled: true,
-              mode: isSource ? importBindMode : 'all',
-              pageId: importPageMode === 'existing' && importPageId ? Number(importPageId) : undefined,
-              moduleId:
-                importBindLevel === 'module' && importModuleMode === 'existing' && importModuleId ? Number(importModuleId) : undefined
-            };
-
-      const createContext =
-        importBindLevel === 'off'
-          ? undefined
-          : {
-              page:
-                importPageMode === 'create' && importCreatePageRoute.trim()
-                  ? {
-                      route: importCreatePageRoute.trim(),
-                      title: importCreatePageTitle.trim() ? importCreatePageTitle.trim() : undefined
-                    }
-                  : undefined,
-              module:
-                importBindLevel === 'module' && importModuleMode === 'create' && importCreateModuleName.trim()
-                  ? { name: importCreateModuleName.trim() }
-                  : undefined
-            };
+          : bindPlan.mode === 'single'
+            ? {
+                mode: 'single' as const,
+                scope: bindPlan.scope,
+                target: {
+                  pageId:
+                    bindPlan.pageMode === 'existing' && bindPlan.pageId ? Number(bindPlan.pageId) : undefined,
+                  moduleId:
+                    bindPlan.moduleMode === 'existing' && bindPlan.moduleId ? Number(bindPlan.moduleId) : undefined
+                },
+                createContext: {
+                  page:
+                    bindPlan.pageMode === 'create' && bindPlan.createPageRoute?.trim()
+                      ? {
+                          route: bindPlan.createPageRoute.trim(),
+                          title: bindPlan.createPageTitle?.trim() ? bindPlan.createPageTitle.trim() : undefined
+                        }
+                      : undefined,
+                  module:
+                    bindPlan.moduleMode === 'create' && bindPlan.createModuleName?.trim()
+                      ? { name: bindPlan.createModuleName.trim() }
+                      : undefined
+                }
+              }
+            : {
+                mode: 'per_key' as const,
+                scope: bindPlan.scope,
+                items: bindPlan.items
+                  .map((it) => ({
+                    key: it.key,
+                    pageId: Number(it.pageId),
+                    moduleId: it.moduleId ? Number(it.moduleId) : undefined
+                  }))
+                  .filter((it) => Number.isFinite(it.pageId))
+              };
 
       const res = await importLanguagePackAction({
         projectId,
         locale: selectedLocale,
         rawJson: importRawJson,
-        bind,
-        createContext
+        bindPlan: normalizedBindPlan
       });
       if (!res.ok) {
         setImportError(res.error);
@@ -950,12 +778,12 @@ export function ProjectPackagesClient({
 
       const refreshed = await listPackagesEntriesQuery(projectId);
       if (refreshed.ok) setEntries(refreshed.data.items);
-      if (importBindLevel !== 'off') {
+      if (res.ok && res.data.bind) {
         await loadContextNodes(true);
       }
 
       setImportStage('confirmed');
-      if (res.data.bind) {
+      if (res.data.bind && res.data.bind.targetsCount === 1 && typeof res.data.bind.pageId === 'number') {
         const qs = new URLSearchParams({ pageId: String(res.data.bind.pageId) });
         if (typeof res.data.bind.moduleId === 'number') {
           qs.set('moduleId', String(res.data.bind.moduleId));
@@ -964,14 +792,7 @@ export function ProjectPackagesClient({
       } else {
         setLastImportContextLink(null);
       }
-      const bindHint =
-        importBindLevel === 'off'
-          ? ''
-          : importPageMode === 'existing'
-            ? importBindLevel === 'module'
-              ? ` · 已绑定到 ${importSelectedPage?.route ?? `pageId=${importPageId}`}/${importModuleOptions.find((m) => m.value === importModuleId)?.label ?? `moduleId=${importModuleId}`}`
-              : ` · 已绑定到 ${importSelectedPage?.route ?? `pageId=${importPageId}`}`
-            : ' · 已在导入中创建并绑定页面/模块';
+      const bindHint = res.data.bind ? ` · 已设置归属 ${res.data.bind.boundCount} 条` : '';
       push({
         variant: 'default',
         title: '导入成功',
@@ -1115,9 +936,9 @@ export function ProjectPackagesClient({
         <CardHeader className="gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <CardTitle className="text-base">语言包 / 词条池</CardTitle>
+              <CardTitle className="text-base">语言包管理</CardTitle>
               <div className="mt-1 text-sm text-muted-foreground">
-                源语言为真；目标语言用于翻译协作与导出。结构模板：{templateShape === 'tree' ? '树形' : '扁平'}。
+                管理原文与翻译内容，支持导入/导出与页面/模块归属。组织形式：{templateShape === 'tree' ? '树形' : '扁平'}。
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1283,64 +1104,19 @@ export function ProjectPackagesClient({
                     importFileName={importFileName}
                     importFileSize={importFileSize}
                     importPreview={importPreview}
+                    importMap={importMap}
                     importError={importError}
                     previewTab={previewTab}
                     onPreviewTabChange={(value) => setPreviewTab(value)}
                     onPickFile={handlePickImportFile}
                     onReset={resetImport}
-                    onConfirm={() => void handleConfirmImport()}
+                    onConfirm={(bindPlan) => void handleConfirmImport(bindPlan)}
                     canManage={canManage}
-                    canConfirm={canConfirmImport}
-                    bindLevel={importBindLevel}
-                    onBindLevelChange={(value) => {
-                      setImportBindLevel(value);
-                      if (value === 'off') {
-                        setImportPageMode('existing');
-                        setImportPageId('');
-                        setImportCreatePageRoute('');
-                        setImportCreatePageTitle('');
-                        setImportModuleMode('existing');
-                        setImportModuleId('');
-                        setImportCreateModuleName('');
-                      }
-                    }}
-                    bindMode={importBindMode}
-                    onBindModeChange={(value) => setImportBindMode(value)}
                     contextError={contextError}
                     contextLoaded={contextLoaded}
                     contextBusy={contextBusy}
                     contextPages={contextPages}
-                    pageMode={importPageMode}
-                    onPageModeChange={(value) => {
-                      setImportPageMode(value);
-                      setImportPageId('');
-                      setImportCreatePageRoute('');
-                      setImportCreatePageTitle('');
-                      setImportModuleId('');
-                      setImportCreateModuleName('');
-                      setImportModuleMode('existing');
-                    }}
-                    pageId={importPageId}
-                    onPageIdChange={(value) => setImportPageId(value)}
-                    createPageRoute={importCreatePageRoute}
-                    onCreatePageRouteChange={(value) => setImportCreatePageRoute(value)}
-                    createPageTitle={importCreatePageTitle}
-                    onCreatePageTitleChange={(value) => setImportCreatePageTitle(value)}
-                    moduleMode={importModuleMode}
-                    onModuleModeChange={(value) => {
-                      setImportModuleMode(value);
-                      setImportModuleId('');
-                      setImportCreateModuleName('');
-                    }}
-                    moduleId={importModuleId}
-                    onModuleIdChange={(value) => setImportModuleId(value)}
-                    createModuleName={importCreateModuleName}
-                    onCreateModuleNameChange={(value) => setImportCreateModuleName(value)}
-                    selectedPage={importSelectedPage}
-                    moduleOptions={importModuleOptions}
                     projectId={projectId}
-                    bindValidationError={importBindValidationError}
-                    bindWarning={importBindWarning}
                   />
                 )
               },

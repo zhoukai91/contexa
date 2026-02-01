@@ -62,6 +62,16 @@ export function unauthorized(message = 'Unauthorized') {
   );
 }
 
+export function forbidden(message = 'Forbidden') {
+  return jsonError(
+    {
+      code: 'FORBIDDEN',
+      message
+    },
+    { status: 403 }
+  );
+}
+
 export function validationError(
   message = 'Validation error',
   fieldErrors?: ApiError['fieldErrors']
@@ -78,7 +88,10 @@ export function validationError(
 
 export function fromUnknownError(err: unknown) {
   if (err instanceof Error) {
-    return internalError(err.message);
+    if (process.env.NODE_ENV !== 'production') {
+      return internalError(err.message);
+    }
+    return internalError();
   }
   return internalError();
 }
@@ -92,4 +105,3 @@ export function isApiErrorCode(value: string): value is ApiErrorCode {
     value === 'INTERNAL_ERROR'
   );
 }
-

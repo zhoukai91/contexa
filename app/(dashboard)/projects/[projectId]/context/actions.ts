@@ -10,6 +10,7 @@ import { getUser } from '@/lib/db/queries';
 import type { ContextEntry, ContextPage } from './context-model';
 
 const projectIdSchema = z.coerce.number().int().positive();
+const ROOT_MODULE_NAME = '__root__';
 
 export type ContextActionResult =
   | { ok: true; success: string }
@@ -85,8 +86,32 @@ function toIsoString(date: Date) {
   return date.toISOString();
 }
 
-function nullableId(id?: number) {
-  return typeof id === 'number' ? id : null;
+async function getOrCreateRootModuleId(
+  tx: Prisma.TransactionClient,
+  pageId: number
+): Promise<number> {
+  const existing = await tx.module.findFirst({
+    where: { pageId, name: ROOT_MODULE_NAME },
+    select: { id: true }
+  });
+  if (existing) return existing.id;
+
+  try {
+    const created = await tx.module.create({
+      data: { pageId, name: ROOT_MODULE_NAME },
+      select: { id: true }
+    });
+    return created.id;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const after = await tx.module.findFirst({
+        where: { pageId, name: ROOT_MODULE_NAME },
+        select: { id: true }
+      });
+      if (after) return after.id;
+    }
+    throw error;
+  }
 }
 
 async function checkProjectAccess(projectId: number) {
@@ -227,8 +252,8 @@ export async function deletePageAction(input: z.infer<typeof deletePageSchema>) 
     }
 
     await prisma.$transaction(async (tx) => {
+      await tx.entryPlacement.deleteMany({ where: { module: { pageId: data.pageId } } });
       await tx.module.deleteMany({ where: { pageId: data.pageId } });
-      await tx.entryPlacement.deleteMany({ where: { pageId: data.pageId } });
       await tx.page.delete({ where: { id: data.pageId } });
     });
 
@@ -342,51 +367,22 @@ export async function bindEntriesAction(input: z.infer<typeof bindEntriesSchema>
       return { ok: false, error: t('toast.bindFailed') };
     }
 
-    if (typeof data.moduleId === 'number') {
-      const moduleId = data.moduleId;
-      await prisma.$transaction(
+    await prisma.$transaction(async (tx) => {
+      const moduleId =
+        typeof data.moduleId === 'number'
+          ? data.moduleId
+          : await getOrCreateRootModuleId(tx, data.pageId);
+
+      await Promise.all(
         entryIds.map((entryId) =>
-          prisma.entryPlacement.upsert({
-            where: {
-              entryId_pageId_moduleId: {
-                entryId,
-                pageId: data.pageId,
-                moduleId
-              }
-            },
+          tx.entryPlacement.upsert({
+            where: { entryId_moduleId: { entryId, moduleId } },
             update: {},
-            create: {
-              entryId,
-              pageId: data.pageId,
-              moduleId
-            }
+            create: { entryId, moduleId }
           })
         )
       );
-    } else {
-      await prisma.$transaction(async (tx) => {
-        const existing = await tx.entryPlacement.findMany({
-          where: {
-            pageId: data.pageId,
-            moduleId: null,
-            entryId: { in: entryIds }
-          },
-          select: { entryId: true }
-        });
-
-        const existingIds = new Set(existing.map((p) => p.entryId));
-        const missingEntryIds = entryIds.filter((id) => !existingIds.has(id));
-        if (missingEntryIds.length === 0) return;
-
-        await tx.entryPlacement.createMany({
-          data: missingEntryIds.map((entryId) => ({
-            entryId,
-            pageId: data.pageId,
-            moduleId: null
-          }))
-        });
-      });
-    }
+    });
 
     revalidatePath(`/projects/${data.projectId}/context`);
     return { ok: true, success: t('toast.bound', { count: entryIds.length }) };
@@ -416,12 +412,14 @@ export async function unbindEntriesAction(input: z.infer<typeof unbindEntriesSch
     }
 
     const entryIds = Array.from(new Set(data.entryIds));
-    await prisma.entryPlacement.deleteMany({
-      where: {
-        pageId: data.pageId,
-        moduleId: nullableId(data.moduleId),
-        entryId: { in: entryIds }
-      }
+    await prisma.$transaction(async (tx) => {
+      const moduleId =
+        typeof data.moduleId === 'number'
+          ? data.moduleId
+          : await getOrCreateRootModuleId(tx, data.pageId);
+      await tx.entryPlacement.deleteMany({
+        where: { moduleId, entryId: { in: entryIds } }
+      });
     });
 
     revalidatePath(`/projects/${data.projectId}/context`);
@@ -442,6 +440,7 @@ export async function getProjectContextTree(projectId: number): Promise<ContextP
         description: true,
         updatedAt: true,
         modules: {
+          where: { name: { not: ROOT_MODULE_NAME } },
           orderBy: { name: 'asc' },
           select: {
             id: true,
@@ -454,8 +453,8 @@ export async function getProjectContextTree(projectId: number): Promise<ContextP
       }
     }),
     prisma.entryPlacement.findMany({
-      where: { page: { projectId } },
-      select: { pageId: true, moduleId: true, entryId: true }
+      where: { module: { page: { projectId } } },
+      select: { moduleId: true, entryId: true, module: { select: { pageId: true, name: true } } }
     })
   ]);
 
@@ -463,11 +462,12 @@ export async function getProjectContextTree(projectId: number): Promise<ContextP
   const moduleEntryIds = new Map<number, Set<number>>();
 
   for (const placement of placements) {
-    const pageSet = pageEntryIds.get(placement.pageId) ?? new Set<number>();
+    const pageId = placement.module.pageId;
+    const pageSet = pageEntryIds.get(pageId) ?? new Set<number>();
     pageSet.add(placement.entryId);
-    pageEntryIds.set(placement.pageId, pageSet);
+    pageEntryIds.set(pageId, pageSet);
 
-    if (typeof placement.moduleId === 'number') {
+    if (placement.module.name !== ROOT_MODULE_NAME) {
       const moduleSet = moduleEntryIds.get(placement.moduleId) ?? new Set<number>();
       moduleSet.add(placement.entryId);
       moduleEntryIds.set(placement.moduleId, moduleSet);
@@ -494,14 +494,20 @@ export async function getProjectContextTree(projectId: number): Promise<ContextP
 
 export async function getBoundEntriesAction(input: z.infer<typeof getBoundEntriesSchema>) {
   return runProjectQuery(getBoundEntriesSchema, input, async (data) => {
-    const placements = await prisma.entryPlacement.findMany({
-      where: {
-        pageId: data.pageId,
-        moduleId: nullableId(data.moduleId),
-        entry: { projectId: data.projectId }
-      },
-      include: { entry: { select: { id: true, key: true, sourceText: true, updatedAt: true } } },
-      orderBy: { entryId: 'asc' }
+    const placements = await prisma.$transaction(async (tx) => {
+      const moduleId =
+        typeof data.moduleId === 'number'
+          ? data.moduleId
+          : await getOrCreateRootModuleId(tx, data.pageId);
+
+      return await tx.entryPlacement.findMany({
+        where: {
+          moduleId,
+          entry: { projectId: data.projectId }
+        },
+        include: { entry: { select: { id: true, key: true, sourceText: true, updatedAt: true } } },
+        orderBy: { entryId: 'asc' }
+      });
     });
 
     return placements.map((p): ContextEntry => ({

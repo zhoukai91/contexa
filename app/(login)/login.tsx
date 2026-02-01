@@ -16,7 +16,7 @@ import { Card } from '@/components/ui/card';
 import { LogoMark } from '@/components/brand/logo-mark';
 
 const REMEMBER_FLAG_KEY = 'contexa_login_remember';
-const REMEMBER_EMAIL_KEY = 'contexa_login_email';
+const REMEMBER_ACCOUNT_KEY = 'contexa_login_account';
 const REMEMBER_PASSWORD_KEY = 'contexa_login_password';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
@@ -29,19 +29,19 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
-  const [email, setEmail] = useState(state.email ?? '');
+  const [account, setAccount] = useState(state.account ?? '');
   const [password, setPassword] = useState(state.password ?? '');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (state.email !== undefined) {
-      setEmail(state.email);
+    if (state.account !== undefined) {
+      setAccount(state.account);
     }
     if (state.password !== undefined) {
       setPassword(state.password);
     }
-  }, [state.email, state.password]);
+  }, [state.account, state.password]);
 
   useEffect(() => {
     if (mode !== 'signin') return;
@@ -50,10 +50,10 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     const storedFlag = window.localStorage.getItem(REMEMBER_FLAG_KEY);
     if (storedFlag === '1') {
       setRememberMe(true);
-      const storedEmail = window.localStorage.getItem(REMEMBER_EMAIL_KEY);
+      const storedAccount = window.localStorage.getItem(REMEMBER_ACCOUNT_KEY);
       const storedPassword = window.localStorage.getItem(REMEMBER_PASSWORD_KEY);
-      if (!state.email && storedEmail) {
-        setEmail(storedEmail);
+      if (!state.account && storedAccount) {
+        setAccount(storedAccount);
       }
       if (!state.password && storedPassword) {
         setPassword(storedPassword);
@@ -61,7 +61,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     } else {
       setRememberMe(true);
     }
-  }, [mode, state.email, state.password]);
+  }, [mode, state.account, state.password]);
 
   useEffect(() => {
     if (mode !== 'signin') return;
@@ -69,15 +69,15 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
 
     if (!rememberMe) {
       window.localStorage.removeItem(REMEMBER_FLAG_KEY);
-      window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      window.localStorage.removeItem(REMEMBER_ACCOUNT_KEY);
       window.localStorage.removeItem(REMEMBER_PASSWORD_KEY);
       return;
     }
 
     window.localStorage.setItem(REMEMBER_FLAG_KEY, '1');
-    window.localStorage.setItem(REMEMBER_EMAIL_KEY, email || '');
+    window.localStorage.setItem(REMEMBER_ACCOUNT_KEY, account || '');
     window.localStorage.setItem(REMEMBER_PASSWORD_KEY, password || '');
-  }, [mode, rememberMe, email, password]);
+  }, [mode, rememberMe, account, password]);
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-background px-4 py-12">
@@ -107,18 +107,18 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
               <input type="hidden" name="inviteId" value={inviteId || ''} />
 
               <div className="space-y-2">
-                <Label htmlFor="email">{t('accountLabel')}</Label>
+                <Label htmlFor="account">{t('accountLabel')}</Label>
                 <Input
-                  id="email"
-                  name="email"
+                  id="account"
+                  name="account"
                   type="text"
                   autoComplete="username"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={account}
+                  onChange={(e) => setAccount(e.target.value)}
                   required
-                  minLength={mode === 'signin' ? 5 : 6}
+                  minLength={3}
                   maxLength={50}
-                  pattern="[A-Za-z0-9.@]+"
+                  pattern="[A-Za-z0-9_.@-]+"
                   placeholder={t('accountPlaceholder')}
                 />
               </div>
@@ -138,7 +138,6 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                     required
                     minLength={6}
                     maxLength={100}
-                    pattern="[A-Za-z0-9.@]+"
                     placeholder={t('passwordPlaceholder')}
                   />
                   <button

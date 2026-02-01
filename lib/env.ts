@@ -13,7 +13,10 @@ const envSchema = z.object({
   SQLITE_PATH: z.string().optional(),
   ENHANCED_SERVICE_URL: z.string().url().optional(),
   ENHANCED_CORE_SECRET: z.string().min(16).optional(),
-  CORE_INSTANCE_ID: z.string().min(1).optional()
+  CORE_INSTANCE_ID: z.string().min(1).optional(),
+  ENHANCED_CLIENT_ID: z.string().min(1).optional(),
+  ENHANCED_CLIENT_SECRET: z.string().min(16).optional(),
+  CRON_SECRET: z.string().min(16).optional()
 });
 
 const parsed = envSchema.safeParse(process.env);

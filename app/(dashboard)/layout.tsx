@@ -5,7 +5,7 @@ import DashboardHeader from './header-client';
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
   const headerUser = user
-    ? { id: user.id, email: user.email, name: user.name ?? null }
+    ? { id: user.id, account: user.account, name: user.name ?? null }
     : null;
 
   return (

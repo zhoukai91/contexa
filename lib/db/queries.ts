@@ -103,7 +103,7 @@ export async function getTeamForUser() {
         include: {
           teamMembers: {
             include: {
-              user: { select: { id: true, name: true, email: true } }
+              user: { select: { id: true, name: true, account: true } }
             }
           }
         }

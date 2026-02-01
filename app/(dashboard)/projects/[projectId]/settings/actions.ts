@@ -417,9 +417,13 @@ export const deleteProjectAction = validatedActionWithProject(
           where: { projectId: data.projectId }
         });
 
+        await tx.projectSetting.deleteMany({
+          where: { projectId: data.projectId }
+        });
+
         if (pageIds.length > 0) {
           await tx.entryPlacement.deleteMany({
-            where: { pageId: { in: pageIds } }
+            where: { module: { pageId: { in: pageIds } } }
           });
           await tx.module.deleteMany({
             where: { pageId: { in: pageIds } }
@@ -444,6 +448,9 @@ export const deleteProjectAction = validatedActionWithProject(
           where: { projectId: data.projectId }
         });
         await tx.projectNegativePrompt.deleteMany({
+          where: { projectId: data.projectId }
+        });
+        await tx.packageUpload.deleteMany({
           where: { projectId: data.projectId }
         });
         await tx.userProjectLocalePreference.deleteMany({

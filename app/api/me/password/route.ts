@@ -1,43 +1,9 @@
 import { z } from 'zod';
-import { comparePasswords, hashPassword, verifyToken } from '@/lib/auth/session';
+import { comparePasswords, hashPassword } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
-import { getUserWithTeam } from '@/lib/db/queries';
+import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import { ActivityType } from '@/lib/db/types';
 import { fromUnknownError, jsonOk, unauthorized, validationError } from '@/lib/http/response';
-
-function getCookieValue(cookieHeader: string | null, name: string) {
-  if (!cookieHeader) return null;
-  const parts = cookieHeader.split(';');
-  for (const part of parts) {
-    const [k, ...rest] = part.trim().split('=');
-    if (k === name) return decodeURIComponent(rest.join('='));
-  }
-  return null;
-}
-
-async function getUserFromSessionCookie(cookieHeader: string | null) {
-  const session = getCookieValue(cookieHeader, 'session');
-  if (!session) return null;
-
-  let sessionData: Awaited<ReturnType<typeof verifyToken>> | null = null;
-  try {
-    sessionData = await verifyToken(session);
-  } catch {
-    return null;
-  }
-
-  if (!sessionData?.user || typeof sessionData.user.id !== 'number') {
-    return null;
-  }
-
-  if (new Date(sessionData.expires) < new Date()) {
-    return null;
-  }
-
-  return await prisma.user.findFirst({
-    where: { id: sessionData.user.id, deletedAt: null }
-  });
-}
 
 const accountPattern = /^[A-Za-z0-9.@]+$/;
 const passwordSchema = z
@@ -54,7 +20,7 @@ const changePasswordSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const user = await getUserFromSessionCookie(request.headers.get('cookie'));
+    const user = await getUser();
     if (!user) {
       return unauthorized();
     }
@@ -115,4 +81,3 @@ export async function POST(request: Request) {
     return fromUnknownError(err);
   }
 }
-

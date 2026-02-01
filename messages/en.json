@@ -33,16 +33,17 @@
     "adminLimitReached": "Maximum of 5 system admins reached",
     "signInFailed": "Invalid account or password, please try again.",
     "onlySystemAdminCreateProject": "Only system admin can create projects",
-    "createProjectFailed": "Failed to create project, please check if name exists",
+    "createProjectNameExists": "Project name already exists, please choose another.",
+    "createProjectFailed": "Failed to create project, please try again.",
     "switchLocaleFailed": "Failed to switch language, please try again."
   },
   "validations": {
     "passwordMin": "Password must be at least 6 characters",
     "passwordMax": "Password must be at most 100 characters",
-    "passwordPattern": "Password can only contain letters, numbers, ., @",
+    "passwordPattern": "Password can contain any characters",
     "accountMax": "Account must be at most 255 characters",
-    "accountPattern": "Account can only contain letters, numbers, ., @",
-    "accountMin": "Account must be at least 6 characters",
+    "accountPattern": "Account can only contain letters, numbers, _, -, ., @",
+    "accountMin": "Account must be at least 3 characters",
     "projectNameRequired": "Project name is required",
     "projectNameMax": "Project name must be at most 100 characters",
     "projectDescMax": "Description must be at most 2000 characters",
@@ -247,9 +248,10 @@
       "status": "Status"
     },
     "status": {
-      "untranslated": "Untranslated",
-      "pendingReview": "Pending review",
-      "updated": "Updated",
+      "pending": "Pending",
+      "needs_update": "Needs update",
+      "needs_review": "Needs review",
+      "ready": "Ready",
       "approved": "Approved"
     },
     "aiBadge": {
@@ -282,7 +284,7 @@
     },
     "toast": {
       "savedTitle": "Saved",
-      "savedMessage": "Translation updated. Status set to Pending review.",
+      "savedMessage": "Translation updated. Status set to Ready.",
       "invalidTitle": "Can't save",
       "invalidEmpty": "Target text cannot be empty.",
       "approvedTitle": "Marked approved",
@@ -577,8 +579,8 @@
     "addSubtitle": "Select an existing user and assign a role.",
     "user": "User",
     "userPlaceholder": "Select a user",
-    "email": "Email",
-    "emailPlaceholder": "Enter email",
+    "email": "Account",
+    "emailPlaceholder": "Enter account",
     "role": "Role",
     "canReview": "Can review",
     "add": "Add",

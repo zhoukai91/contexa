@@ -18,43 +18,44 @@ async function main() {
     }
   });
 
-  const adminEmail = 'admin';
+  const adminAccount = 'admin';
   const adminPasswordHash = await hash('admin@contexa', 10);
 
   const legacyAdmin = await prisma.user.findUnique({
-    where: { email: 'admin@contexa.local' }
+    where: { account: 'admin@contexa.local' }
   });
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const existingAdmin = await prisma.user.findUnique({ where: { account: adminAccount } });
 
-  const admin = legacyAdmin
-    ? await prisma.user.update({
-        where: { id: legacyAdmin.id },
-        data: {
-          email: existingAdmin ? legacyAdmin.email : adminEmail,
-          name: 'Admin',
-          passwordHash: adminPasswordHash,
-          isSystemAdmin: true,
-          role: 'owner',
-          deletedAt: null
-        }
-      })
-    : await prisma.user.upsert({
-        where: { email: adminEmail },
-        update: {
-          name: 'Admin',
-          passwordHash: adminPasswordHash,
-          isSystemAdmin: true,
-          role: 'owner',
-          deletedAt: null
-        },
-        create: {
-          email: adminEmail,
-          name: 'Admin',
-          passwordHash: adminPasswordHash,
-          role: 'owner',
-          isSystemAdmin: true
-        }
-      });
+  const admin =
+    legacyAdmin && !existingAdmin
+      ? await prisma.user.update({
+          where: { id: legacyAdmin.id },
+          data: {
+            account: adminAccount,
+            name: 'Admin',
+            passwordHash: adminPasswordHash,
+            isSystemAdmin: true,
+            role: 'owner',
+            deletedAt: null
+          }
+        })
+      : await prisma.user.upsert({
+          where: { account: adminAccount },
+          update: {
+            name: 'Admin',
+            passwordHash: adminPasswordHash,
+            isSystemAdmin: true,
+            role: 'owner',
+            deletedAt: null
+          },
+          create: {
+            account: adminAccount,
+            name: 'Admin',
+            passwordHash: adminPasswordHash,
+            role: 'owner',
+            isSystemAdmin: true
+          }
+        });
 
   let team = await prisma.team.findFirst({ where: { name: 'Default Team' } });
   if (!team) {
@@ -157,16 +158,14 @@ async function main() {
 
   await prisma.entryPlacement.upsert({
     where: {
-      entryId_pageId_moduleId: {
+      entryId_moduleId: {
         entryId: entry.id,
-        pageId: page.id,
         moduleId: module.id
       }
     },
     update: {},
     create: {
       entryId: entry.id,
-      pageId: page.id,
       moduleId: module.id
     }
   });

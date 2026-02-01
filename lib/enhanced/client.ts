@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { env } from '@/lib/env';
+import { getCoreInstanceId, getEnhancedSessionTokens, setEnhancedSessionTokens, setLastSuccessfulHeartbeat } from '@/lib/enhanced/state';
 
 export type EnhancedConnectionState =
   | { connected: false; reason: 'not_configured' | 'unreachable' }
@@ -15,16 +16,23 @@ export type EnhancedSystemStatus =
       expiresAt?: string | null;
     });
 
-function getHeaders() {
+async function getHeaders(options?: { includeSessionToken?: boolean }) {
   const headers: Record<string, string> = {
     'content-type': 'application/json'
   };
 
+  const instanceId = await getCoreInstanceId();
+
   if (env.ENHANCED_CORE_SECRET) {
     headers['x-core-secret'] = env.ENHANCED_CORE_SECRET;
   }
-  if (env.CORE_INSTANCE_ID) {
-    headers['x-core-instance-id'] = env.CORE_INSTANCE_ID;
+  headers['x-core-instance-id'] = instanceId;
+
+  if (options?.includeSessionToken) {
+    const { currentToken } = await getEnhancedSessionTokens();
+    if (currentToken) {
+      headers['x-tms-session-token'] = currentToken;
+    }
   }
   return headers;
 }
@@ -35,9 +43,9 @@ export async function getEnhancedSystemStatus(): Promise<EnhancedSystemStatus> {
   }
 
   try {
-    const res = await fetch(`${env.ENHANCED_SERVICE_URL}/api/system/status`, {
+    const res = await fetch(`${env.ENHANCED_SERVICE_URL}/api/internal/system/status`, {
       method: 'GET',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       cache: 'no-store'
     });
     const json = await res.json().catch(() => null);
@@ -62,9 +70,9 @@ export async function activateEnhancedLicense(input: {
   }
 
   try {
-    const res = await fetch(`${env.ENHANCED_SERVICE_URL}/api/system/activate`, {
+    const res = await fetch(`${env.ENHANCED_SERVICE_URL}/api/internal/license/activate`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       body: JSON.stringify(input),
       cache: 'no-store'
     });
@@ -96,9 +104,9 @@ export async function savePlatformApiConfig(
   }
 
   try {
-    const res = await fetch(`${env.ENHANCED_SERVICE_URL}/api/system/platform-api-config`, {
+    const res = await fetch(`${env.ENHANCED_SERVICE_URL}/api/internal/platform-api-config`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       body: JSON.stringify(input),
       cache: 'no-store'
     });
@@ -112,3 +120,32 @@ export async function savePlatformApiConfig(
   }
 }
 
+export async function heartbeatEnhanced(): Promise<EnhancedConnectionState> {
+  if (!env.ENHANCED_SERVICE_URL) {
+    return { connected: false, reason: 'not_configured' };
+  }
+
+  try {
+    const res = await fetch(`${env.ENHANCED_SERVICE_URL}/api/internal/heartbeat`, {
+      method: 'POST',
+      headers: await getHeaders({ includeSessionToken: true }),
+      body: JSON.stringify({}),
+      cache: 'no-store'
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.ok || !json?.data?.sessionToken) {
+      return { connected: false, reason: 'unreachable' };
+    }
+
+    const { currentToken } = await getEnhancedSessionTokens();
+    await setEnhancedSessionTokens({
+      currentToken: json.data.sessionToken,
+      previousToken: currentToken
+    });
+    await setLastSuccessfulHeartbeat(new Date());
+
+    return { connected: true };
+  } catch {
+    return { connected: false, reason: 'unreachable' };
+  }
+}

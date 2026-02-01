@@ -33,31 +33,30 @@ async function logActivity(
   });
 }
 
-const accountPattern = /^[A-Za-z0-9.@]+$/;
+const accountPattern = /^[A-Za-z0-9_.@-]+$/;
 const accountSchema = z
   .string()
   .max(255, 'validations.accountMax')
   .regex(accountPattern, 'validations.accountPattern')
-  .refine((v) => v === 'admin' || v.length >= 6, {
+  .refine((v) => v === 'admin' || v.length >= 3, {
     message: 'validations.accountMin'
   });
 const passwordSchema = z
   .string()
   .min(6, 'validations.passwordMin')
-  .max(100, 'validations.passwordMax')
-  .regex(accountPattern, 'validations.passwordPattern');
+  .max(100, 'validations.passwordMax');
 
 const signInSchema = z.object({
-  email: accountSchema,
+  account: accountSchema,
   password: passwordSchema
 });
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
-  const { email, password } = data;
+  const { account, password } = data;
   const t = await getTranslations('actions');
 
   const foundUser = await prisma.user.findUnique({
-    where: { email },
+    where: { account },
     include: {
       teamMembers: {
         take: 1,
@@ -69,7 +68,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   if (!foundUser) {
     return {
       error: t('signInFailed'),
-      email,
+      account,
       password
     };
   }
@@ -84,7 +83,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   if (!isPasswordValid) {
     return {
       error: t('signInFailed'),
-      email,
+      account,
       password
     };
   }
@@ -128,19 +127,19 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 });
 
 const signUpSchema = z.object({
-  email: accountSchema,
+  account: accountSchema,
   password: passwordSchema,
   inviteId: z.string().optional()
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password, inviteId } = data;
+  const { account, password, inviteId } = data;
 
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  const existingUser = await prisma.user.findUnique({ where: { account } });
   if (existingUser) {
     return {
       error: '账号已存在或创建失败，请重试。',
-      email,
+      account,
       password
     };
   }
@@ -149,7 +148,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   const createdUser = await prisma.user.create({
     data: {
-      email,
+      account,
       passwordHash,
       role: 'owner'
     }
@@ -161,11 +160,11 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   if (inviteId) {
     const invitationId = Number(inviteId);
     const invitation = await prisma.invitation.findFirst({
-      where: { id: invitationId, email, status: 'pending' }
+      where: { id: invitationId, account, status: 'pending' }
     });
 
     if (!invitation) {
-      return { error: 'Invalid or expired invitation.', email, password };
+      return { error: 'Invalid or expired invitation.', account, password };
     }
 
     teamId = invitation.teamId;
@@ -179,7 +178,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     await logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION);
   } else {
     const createdTeam = await prisma.team.create({
-      data: { name: `${email}'s Team` }
+      data: { name: `${account}'s Team` }
     });
     teamId = createdTeam.id;
     userRole = 'owner';
@@ -328,7 +327,7 @@ export const deleteAccount = validatedActionWithUser(
       where: { id: user.id },
       data: {
         deletedAt: new Date(),
-        email: `${user.email}-${user.id}-deleted`
+        account: `${user.account}-${user.id}-deleted`
       }
     });
 
@@ -343,17 +342,17 @@ export const deleteAccount = validatedActionWithUser(
 
 const updateAccountSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  email: accountSchema
+  account: accountSchema
 });
 
 export const updateAccount = validatedActionWithUser(
   updateAccountSchema,
   async (data, _, user) => {
-    const { name, email } = data;
+    const { name, account } = data;
     const userWithTeam = await getUserWithTeam(user.id);
 
     await Promise.all([
-      prisma.user.update({ where: { id: user.id }, data: { name, email } }),
+      prisma.user.update({ where: { id: user.id }, data: { name, account } }),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 
@@ -390,14 +389,14 @@ export const removeTeamMember = validatedActionWithUser(
 );
 
 const inviteTeamMemberSchema = z.object({
-  email: accountSchema,
+  account: accountSchema,
   role: z.enum(['member', 'owner'])
 });
 
 export const inviteTeamMember = validatedActionWithUser(
   inviteTeamMemberSchema,
   async (data, _, user) => {
-    const { email, role } = data;
+    const { account, role } = data;
     const userWithTeam = await getUserWithTeam(user.id);
 
     if (!userWithTeam?.teamId) {
@@ -406,7 +405,7 @@ export const inviteTeamMember = validatedActionWithUser(
 
     const existingMember = await prisma.user.findFirst({
       where: {
-        email,
+        account,
         teamMembers: {
           some: { teamId: userWithTeam.teamId }
         }
@@ -417,16 +416,16 @@ export const inviteTeamMember = validatedActionWithUser(
     }
 
     const existingInvitation = await prisma.invitation.findFirst({
-      where: { email, teamId: userWithTeam.teamId, status: 'pending' }
+      where: { account, teamId: userWithTeam.teamId, status: 'pending' }
     });
     if (existingInvitation) {
-      return { error: 'An invitation has already been sent to this email' };
+      return { error: 'An invitation has already been sent to this account' };
     }
 
     await prisma.invitation.create({
       data: {
         teamId: userWithTeam.teamId,
-        email,
+        account,
         role,
         invitedBy: user.id,
         status: 'pending'
@@ -439,8 +438,7 @@ export const inviteTeamMember = validatedActionWithUser(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
-    // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
-    // await sendInvitationEmail(email, userWithTeam.team.name, role)
+    // TODO: Send invitation notification and include ?inviteId={id} to sign-up URL
 
     return { success: 'Invitation sent successfully' };
   }

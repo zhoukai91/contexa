@@ -18,7 +18,7 @@ export default async function DemoteUserPage({
   const t = await getTranslations('users');
   const currentUser = await requireUser();
 
-  if (!currentUser.isSystemAdmin || !SUPER_ADMIN_ACCOUNTS.has(currentUser.email)) {
+  if (!currentUser.isSystemAdmin || !SUPER_ADMIN_ACCOUNTS.has(currentUser.account)) {
     return (
       <div className="text-sm text-muted-foreground">{t('noPermission')}</div>
     );
@@ -26,7 +26,7 @@ export default async function DemoteUserPage({
 
   const target = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, isSystemAdmin: true, deletedAt: true }
+    select: { id: true, account: true, isSystemAdmin: true, deletedAt: true }
   });
 
   if (!target || target.deletedAt) {
@@ -35,7 +35,7 @@ export default async function DemoteUserPage({
     );
   }
 
-  const isProtected = SUPER_ADMIN_ACCOUNTS.has(target.email);
+  const isProtected = SUPER_ADMIN_ACCOUNTS.has(target.account);
 
   return (
     <div className="space-y-6">
@@ -50,7 +50,7 @@ export default async function DemoteUserPage({
 
       <Card title={t('confirmAction')} contentClassName="space-y-4">
           <div className="text-sm text-muted-foreground">
-            {t('targetUser')}: {target.email}
+            {t('targetUser')}: {target.account}
           </div>
           <DemoteForm userId={target.id} disabled={!target.isSystemAdmin || isProtected} />
       </Card>

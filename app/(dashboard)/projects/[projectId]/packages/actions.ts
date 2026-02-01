@@ -10,6 +10,32 @@ import { importSourcePack, importTargetPack } from '@/lib/packages/repo';
 
 const projectIdSchema = z.coerce.number().int().positive();
 const localeSchema = z.string().trim().min(1).max(20);
+const ROOT_MODULE_NAME = '__root__';
+
+async function getOrCreateRootModuleId(pageId: number): Promise<number> {
+  const existing = await prisma.module.findFirst({
+    where: { pageId, name: ROOT_MODULE_NAME },
+    select: { id: true }
+  });
+  if (existing) return existing.id;
+
+  try {
+    const created = await prisma.module.create({
+      data: { pageId, name: ROOT_MODULE_NAME },
+      select: { id: true }
+    });
+    return created.id;
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      const after = await prisma.module.findFirst({
+        where: { pageId, name: ROOT_MODULE_NAME },
+        select: { id: true }
+      });
+      if (after) return after.id;
+    }
+    throw error;
+  }
+}
 
 export type PackagesQueryResult<T> = { ok: true; data: T } | { ok: false; error: string };
 export type PackagesActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -233,8 +259,7 @@ export async function listPackagesEntriesQuery(projectId: number): Promise<Packa
           take: 2,
           orderBy: { id: 'asc' },
           select: {
-            page: { select: { route: true, title: true } },
-            module: { select: { name: true } }
+            module: { select: { name: true, page: { select: { route: true, title: true } } } }
           }
         },
         translations: {
@@ -255,6 +280,7 @@ export async function listPackagesEntriesQuery(projectId: number): Promise<Packa
       }
       const placementCount = e._count.placements;
       const first = e.placements[0];
+      const firstModule = first?.module ?? null;
       return {
         id: e.id,
         key: e.key,
@@ -264,11 +290,11 @@ export async function listPackagesEntriesQuery(projectId: number): Promise<Packa
         translations,
         placementCount,
         hasMorePlacements: placementCount > 1,
-        placement: first
+        placement: firstModule
           ? {
-              pageRoute: first.page.route,
-              pageTitle: first.page.title,
-              moduleName: first.module?.name ?? null
+              pageRoute: firstModule.page.route,
+              pageTitle: firstModule.page.title,
+              moduleName: firstModule.name === ROOT_MODULE_NAME ? null : firstModule.name
             }
           : null
       };
@@ -311,19 +337,20 @@ export async function listPackagesEntryPlacementsQuery(
       where: { entryId: parsed.data.entryId },
       orderBy: { id: 'asc' },
       select: {
-        page: { select: { route: true, title: true } },
-        module: { select: { name: true } }
+        module: { select: { name: true, page: { select: { route: true, title: true } } } }
       }
     });
 
     return {
       ok: true,
       data: {
-        items: placements.map((p) => ({
-          pageRoute: p.page.route,
-          pageTitle: p.page.title,
-          moduleName: p.module?.name ?? null
-        }))
+        items: placements
+          .filter((p) => Boolean(p.module))
+          .map((p) => ({
+            pageRoute: p.module!.page.route,
+            pageTitle: p.module!.page.title,
+            moduleName: p.module!.name === ROOT_MODULE_NAME ? null : p.module!.name
+          }))
       }
     };
   } catch (error) {
@@ -365,7 +392,7 @@ export async function listPackagesUploadHistoryQuery(
       where: { projectId },
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { createdBy: { select: { name: true, email: true } } }
+      include: { createdBy: { select: { name: true, account: true } } }
     });
 
     const items = rows.map((r: any) => ({
@@ -373,7 +400,7 @@ export async function listPackagesUploadHistoryQuery(
       createdAt: r.createdAt.toISOString(),
       locale: r.locale,
       shape: (r.shape === 'tree' ? 'tree' : 'flat') as 'flat' | 'tree',
-      operator: r.createdBy?.name || r.createdBy?.email || '—',
+      operator: r.createdBy?.name || r.createdBy?.account || '—',
       summary: {
         added: r.summaryAdded ?? 0,
         updated: r.summaryUpdated ?? 0,
@@ -408,7 +435,7 @@ export async function getPackagesUploadHistoryDetailQuery(
     await getProjectPermissionChecker(parsed.data.projectId);
     const row = await (prisma as any).packageUpload.findUnique({
       where: { id: parsed.data.uploadId },
-      include: { createdBy: { select: { name: true, email: true } } }
+      include: { createdBy: { select: { name: true, account: true } } }
     });
     if (!row || row.projectId !== parsed.data.projectId) return { ok: false, error: '记录不存在' };
 
@@ -451,7 +478,7 @@ export async function getPackagesUploadHistoryDetailQuery(
         createdAt: row.createdAt.toISOString(),
         locale: row.locale,
         shape: (row.shape === 'tree' ? 'tree' : 'flat') as 'flat' | 'tree',
-        operator: row.createdBy?.name || row.createdBy?.email || '—',
+        operator: row.createdBy?.name || row.createdBy?.account || '—',
         summary: {
           added: row.summaryAdded ?? 0,
           updated: row.summaryUpdated ?? 0,
@@ -493,7 +520,11 @@ export async function listPackagesContextNodesQuery(
         id: true,
         route: true,
         title: true,
-        modules: { orderBy: { createdAt: 'asc' }, select: { id: true, name: true } }
+        modules: {
+          where: { name: { not: ROOT_MODULE_NAME } },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, name: true }
+        }
       }
     });
     return { ok: true, data: { pages } };
@@ -610,8 +641,24 @@ export async function createPackagesEntryAction(
       }
 
       if (pageId) {
+        const resolvedModuleId =
+          typeof moduleId === 'number'
+            ? moduleId
+            : (
+                await tx.module.findFirst({
+                  where: { pageId, name: ROOT_MODULE_NAME },
+                  select: { id: true }
+                })
+              )?.id ??
+              (
+                await tx.module.create({
+                  data: { pageId, name: ROOT_MODULE_NAME },
+                  select: { id: true }
+                })
+              ).id;
+
         await tx.entryPlacement.create({
-          data: { entryId: entry.id, pageId, moduleId: moduleId ?? null }
+          data: { entryId: entry.id, moduleId: resolvedModuleId }
         });
       }
 
@@ -650,21 +697,52 @@ const importCreateContextSchema = z.object({
     .optional()
 });
 
+const importBindPlanSingleSchema = z.object({
+  mode: z.literal('single'),
+  scope: z.enum(['new_only', 'all']).default('new_only'),
+  target: z
+    .object({
+      pageId: z.coerce.number().int().positive().optional(),
+      moduleId: z.coerce.number().int().positive().optional()
+    })
+    .default({}),
+  createContext: importCreateContextSchema.optional()
+});
+
+const importBindPlanPerKeySchema = z.object({
+  mode: z.literal('per_key'),
+  scope: z.enum(['new_only', 'all']).default('new_only'),
+  items: z
+    .array(
+      z.object({
+        key: z.string().trim().min(1).max(200),
+        pageId: z.coerce.number().int().positive(),
+        moduleId: z.coerce.number().int().positive().optional()
+      })
+    )
+    .default([])
+});
+
+const importBindPlanSchema = z.discriminatedUnion('mode', [importBindPlanSingleSchema, importBindPlanPerKeySchema]);
+
 const importSchema = z.object({
   projectId: projectIdSchema,
   locale: localeSchema,
   rawJson: z.string().min(1).max(5_000_000),
+  bindPlan: importBindPlanSchema.optional(),
   bind: importBindSchema.optional(),
   createContext: importCreateContextSchema.optional()
 });
 
 type ImportBindSummary = {
-  pageId: number;
-  moduleId: number | null;
   boundCount: number;
-  mode: 'all' | 'addedOnly';
-  createdPage: boolean;
-  createdModule: boolean;
+  mode: 'single' | 'per_key';
+  scope: 'new_only' | 'all';
+  targetsCount: number;
+  pageId?: number;
+  moduleId?: number | null;
+  createdPage?: boolean;
+  createdModule?: boolean;
 };
 
 export type ImportLanguagePackResult =
@@ -698,7 +776,8 @@ async function resolveImportBindTarget(input: {
 }): Promise<
   | {
       pageId: number;
-      moduleId: number | null;
+      moduleId: number;
+      displayModuleId: number | null;
       createdPage: boolean;
       createdModule: boolean;
       createdPageRoute?: string;
@@ -786,47 +865,39 @@ async function resolveImportBindTarget(input: {
     }
   }
 
-  return { pageId, moduleId, createdPage, createdModule, createdPageRoute, createdModuleName };
+  const displayModuleId = moduleId;
+  const resolvedModuleId = typeof moduleId === 'number' ? moduleId : await getOrCreateRootModuleId(pageId);
+
+  return {
+    pageId,
+    moduleId: resolvedModuleId,
+    displayModuleId,
+    createdPage,
+    createdModule,
+    createdPageRoute,
+    createdModuleName
+  };
 }
 
 /** Ensures placements exist for the given entry ids, returning how many were inserted. */
 async function ensureEntryPlacements(input: {
-  pageId: number;
-  moduleId: number | null;
+  moduleId: number;
   entryIds: number[];
 }): Promise<number> {
   const entryIds = Array.from(new Set(input.entryIds));
   if (entryIds.length === 0) return 0;
 
-  if (typeof input.moduleId === 'number') {
-    let inserted = 0;
-    for (const chunk of chunkArray(entryIds, 1000)) {
-      const existing = await prisma.entryPlacement.findMany({
-        where: { pageId: input.pageId, moduleId: input.moduleId, entryId: { in: chunk } },
-        select: { entryId: true }
-      });
-      const existingSet = new Set(existing.map((p) => p.entryId));
-      const missing = chunk.filter((id) => !existingSet.has(id));
-      if (missing.length === 0) continue;
-      const res = await prisma.entryPlacement.createMany({
-        data: missing.map((entryId) => ({ entryId, pageId: input.pageId, moduleId: input.moduleId }))
-      });
-      inserted += res.count;
-    }
-    return inserted;
-  }
-
   let inserted = 0;
   for (const chunk of chunkArray(entryIds, 1000)) {
     const existing = await prisma.entryPlacement.findMany({
-      where: { pageId: input.pageId, moduleId: null, entryId: { in: chunk } },
+      where: { moduleId: input.moduleId, entryId: { in: chunk } },
       select: { entryId: true }
     });
     const existingSet = new Set(existing.map((p) => p.entryId));
     const missing = chunk.filter((id) => !existingSet.has(id));
     if (missing.length === 0) continue;
     const res = await prisma.entryPlacement.createMany({
-      data: missing.map((entryId) => ({ entryId, pageId: input.pageId, moduleId: null }))
+      data: missing.map((entryId) => ({ entryId, moduleId: input.moduleId }))
     });
     inserted += res.count;
   }
@@ -874,18 +945,71 @@ export async function importLanguagePackAction(
       return { ok: false, error: '文件过大：单次导入最多支持 50,000 条。' };
     }
 
-    const bindInput = parsed.data.bind && parsed.data.bind.enabled ? parsed.data.bind : null;
-    const effectiveBindMode: 'all' | 'addedOnly' =
-      parsed.data.locale === project.sourceLocale ? (bindInput?.mode ?? 'all') : 'all';
-    const bindTarget =
-      bindInput && bindInput.enabled
+    const legacyBind = parsed.data.bind && parsed.data.bind.enabled ? parsed.data.bind : null;
+    const normalizedBindPlan:
+      | z.infer<typeof importBindPlanSchema>
+      | (z.infer<typeof importBindPlanSingleSchema> & { mode: 'single' })
+      | null = parsed.data.bindPlan
+      ? parsed.data.bindPlan
+      : legacyBind
+        ? ({
+            mode: 'single',
+            scope:
+              parsed.data.locale === project.sourceLocale
+                ? legacyBind.mode === 'addedOnly'
+                  ? 'new_only'
+                  : 'all'
+                : 'all',
+            target: { pageId: legacyBind.pageId, moduleId: legacyBind.moduleId },
+            createContext: parsed.data.createContext
+          } as z.infer<typeof importBindPlanSingleSchema>)
+        : null;
+
+    const singleBindTarget =
+      normalizedBindPlan && normalizedBindPlan.mode === 'single'
         ? await resolveImportBindTarget({
             projectId: parsed.data.projectId,
-            bind: { ...bindInput, mode: effectiveBindMode },
-            createContext: parsed.data.createContext
+            bind: {
+              enabled: true,
+              mode: 'all',
+              pageId: normalizedBindPlan.target.pageId,
+              moduleId: normalizedBindPlan.target.moduleId
+            },
+            createContext: normalizedBindPlan.createContext
           })
         : null;
-    if (bindTarget && 'error' in bindTarget) return { ok: false, error: bindTarget.error };
+    if (singleBindTarget && 'error' in singleBindTarget) return { ok: false, error: singleBindTarget.error };
+
+    const perKeyBindItems =
+      normalizedBindPlan && normalizedBindPlan.mode === 'per_key' ? normalizedBindPlan.items : null;
+
+    if (perKeyBindItems && perKeyBindItems.length) {
+      const pageIds = Array.from(new Set(perKeyBindItems.map((it) => it.pageId)));
+      const pages = await prisma.page.findMany({
+        where: { projectId: parsed.data.projectId, id: { in: pageIds } },
+        select: { id: true }
+      });
+      const pageIdSet = new Set(pages.map((p) => p.id));
+      const missingPageId = pageIds.find((id) => !pageIdSet.has(id));
+      if (missingPageId) return { ok: false, error: `页面不存在：pageId=${missingPageId}` };
+
+      const moduleIds = Array.from(
+        new Set(perKeyBindItems.map((it) => it.moduleId).filter((id): id is number => typeof id === 'number'))
+      );
+      if (moduleIds.length) {
+        const modules = await prisma.module.findMany({
+          where: { id: { in: moduleIds } },
+          select: { id: true, pageId: true }
+        });
+        const moduleById = new Map(modules.map((m) => [m.id, m] as const));
+        for (const it of perKeyBindItems) {
+          if (typeof it.moduleId !== 'number') continue;
+          const m = moduleById.get(it.moduleId);
+          if (!m) return { ok: false, error: `模块不存在：moduleId=${it.moduleId}` };
+          if (m.pageId !== it.pageId) return { ok: false, error: `模块不属于所选页面：moduleId=${it.moduleId}` };
+        }
+      }
+    }
 
     if (parsed.data.locale === project.sourceLocale) {
       const targetLocales = Array.from(localeSet).filter((l) => l !== project.sourceLocale);
@@ -959,40 +1083,98 @@ export async function importLanguagePackAction(
       }
 
       let bind: ImportBindSummary | undefined;
-      if (bindInput && bindTarget && !('error' in bindTarget)) {
-        const keysToBind = effectiveBindMode === 'addedOnly' ? addedKeys : incomingKeys;
+      if (normalizedBindPlan) {
+        const effectiveScope = normalizedBindPlan.scope;
+        const incomingKeySet = new Set(incomingKeys);
+        const addedKeySet = new Set(addedKeys);
 
-        const addedEntryIds: number[] = [];
-        for (const chunk of chunkArray(addedKeys, 1000)) {
-          const rows = await prisma.entry.findMany({
-            where: { projectId: parsed.data.projectId, key: { in: chunk } },
-            select: { id: true }
-          });
-          addedEntryIds.push(...rows.map((r) => r.id));
+        if (normalizedBindPlan.mode === 'single' && singleBindTarget && !('error' in singleBindTarget)) {
+          const addedEntryRows: Array<{ id: number }> = [];
+          for (const chunk of chunkArray(addedKeys, 1000)) {
+            const rows = await prisma.entry.findMany({
+              where: { projectId: parsed.data.projectId, key: { in: chunk } },
+              select: { id: true }
+            });
+            addedEntryRows.push(...rows);
+          }
+          const addedEntryIds = addedEntryRows.map((r) => r.id);
+          const entryIds =
+            effectiveScope === 'new_only' ? addedEntryIds : [...existingIncoming.map((e) => e.id), ...addedEntryIds];
+          const boundCount =
+            entryIds.length === 0
+              ? 0
+              : await ensureEntryPlacements({
+                  moduleId: singleBindTarget.moduleId,
+                  entryIds
+                });
+          bind = {
+            mode: 'single',
+            scope: effectiveScope,
+            targetsCount: 1,
+            pageId: singleBindTarget.pageId,
+            moduleId: singleBindTarget.displayModuleId,
+            createdPage: singleBindTarget.createdPage,
+            createdModule: singleBindTarget.createdModule,
+            boundCount
+          };
         }
 
-        const entryIds =
-          effectiveBindMode === 'addedOnly'
-            ? addedEntryIds
-            : [...existingIncoming.map((e) => e.id), ...addedEntryIds];
+        if (normalizedBindPlan.mode === 'per_key' && perKeyBindItems) {
+          const items = perKeyBindItems
+            .filter((it) => incomingKeySet.has(it.key))
+            .filter((it) => (effectiveScope === 'new_only' ? addedKeySet.has(it.key) : true));
 
-        const boundCount =
-          keysToBind.length === 0
-            ? 0
-            : await ensureEntryPlacements({
-                pageId: bindTarget.pageId,
-                moduleId: bindTarget.moduleId,
-                entryIds
-              });
+          const keysToResolve = Array.from(new Set(items.map((it) => it.key)));
+          const entryIdByKey = new Map<string, number>();
+          for (const chunk of chunkArray(keysToResolve, 1000)) {
+            const rows = await prisma.entry.findMany({
+              where: { projectId: parsed.data.projectId, key: { in: chunk } },
+              select: { id: true, key: true }
+            });
+            for (const r of rows) entryIdByKey.set(r.key, r.id);
+          }
 
-        bind = {
-          pageId: bindTarget.pageId,
-          moduleId: bindTarget.moduleId,
-          boundCount,
-          mode: effectiveBindMode,
-          createdPage: bindTarget.createdPage,
-          createdModule: bindTarget.createdModule
-        };
+          const groups = new Map<string, { pageId: number; displayModuleId: number | null; entryIds: number[] }>();
+          for (const it of items) {
+            const entryId = entryIdByKey.get(it.key);
+            if (!entryId) continue;
+            const displayModuleId = typeof it.moduleId === 'number' ? it.moduleId : null;
+            const signature = `${it.pageId}:${displayModuleId ?? 'null'}`;
+            const bucket =
+              groups.get(signature) ?? { pageId: it.pageId, displayModuleId, entryIds: [] };
+            bucket.entryIds.push(entryId);
+            groups.set(signature, bucket);
+          }
+
+          let boundCount = 0;
+          const resolvedModuleIdCache = new Map<string, number>();
+          for (const g of groups.values()) {
+            if (g.entryIds.length === 0) continue;
+            const cacheKey = `${g.pageId}:${g.displayModuleId ?? 'null'}`;
+            const moduleId =
+              resolvedModuleIdCache.get(cacheKey) ??
+              (typeof g.displayModuleId === 'number'
+                ? g.displayModuleId
+                : await getOrCreateRootModuleId(g.pageId));
+            resolvedModuleIdCache.set(cacheKey, moduleId);
+
+            boundCount += await ensureEntryPlacements({ moduleId, entryIds: g.entryIds });
+          }
+
+          const targets = Array.from(groups.values()).map((g) => ({
+            pageId: g.pageId,
+            moduleId: g.displayModuleId
+          }));
+          const uniqueTarget = targets.length === 1 ? targets[0] : null;
+          bind = {
+            mode: 'per_key',
+            scope: effectiveScope,
+            targetsCount: targets.length,
+            pageId: uniqueTarget?.pageId,
+            moduleId: uniqueTarget?.moduleId ?? null,
+            boundCount
+          };
+        }
       }
 
       if (incomingKeys.length) {
@@ -1016,12 +1198,12 @@ export async function importLanguagePackAction(
             markedNeedsUpdateKeys,
             pendingReviewKeys: [],
             skippedEmptyKeys: [],
-            bindMode: bind?.mode,
+            bindMode: bind ? (bind.scope === 'new_only' ? 'addedOnly' : 'all') : undefined,
             boundPageId: bind?.pageId,
-            boundModuleId: bind?.moduleId ?? null,
+            boundModuleId: typeof bind?.moduleId === 'number' ? bind.moduleId : null,
             boundCount: bind?.boundCount,
-            createdPageRoute: bindTarget && !('error' in bindTarget) ? bindTarget.createdPageRoute : undefined,
-            createdModuleName: bindTarget && !('error' in bindTarget) ? bindTarget.createdModuleName : undefined
+            createdPageRoute: singleBindTarget && !('error' in singleBindTarget) ? singleBindTarget.createdPageRoute : undefined,
+            createdModuleName: singleBindTarget && !('error' in singleBindTarget) ? singleBindTarget.createdModuleName : undefined
           }
         });
       }
@@ -1088,20 +1270,75 @@ export async function importLanguagePackAction(
           });
 
     let bind: ImportBindSummary | undefined;
-    if (bindInput && bindTarget && !('error' in bindTarget)) {
-      const boundCount = await ensureEntryPlacements({
-        pageId: bindTarget.pageId,
-        moduleId: bindTarget.moduleId,
-        entryIds: existingIncoming.map((e) => e.id)
-      });
-      bind = {
-        pageId: bindTarget.pageId,
-        moduleId: bindTarget.moduleId,
-        boundCount,
-        mode: effectiveBindMode,
-        createdPage: bindTarget.createdPage,
-        createdModule: bindTarget.createdModule
-      };
+    if (normalizedBindPlan) {
+      const effectiveScope = normalizedBindPlan.scope === 'new_only' ? 'all' : normalizedBindPlan.scope;
+      const incomingKeySet = new Set(incomingKeys);
+
+      if (normalizedBindPlan.mode === 'single' && singleBindTarget && !('error' in singleBindTarget)) {
+        const entryIds = existingIncoming.map((e) => e.id);
+        const boundCount =
+          entryIds.length === 0
+            ? 0
+            : await ensureEntryPlacements({
+                moduleId: singleBindTarget.moduleId,
+                entryIds
+              });
+        bind = {
+          mode: 'single',
+          scope: effectiveScope,
+          targetsCount: 1,
+          pageId: singleBindTarget.pageId,
+          moduleId: singleBindTarget.displayModuleId,
+          createdPage: singleBindTarget.createdPage,
+          createdModule: singleBindTarget.createdModule,
+          boundCount
+        };
+      }
+
+      if (normalizedBindPlan.mode === 'per_key' && perKeyBindItems) {
+        const items = perKeyBindItems.filter((it) => incomingKeySet.has(it.key));
+
+        const groups = new Map<string, { pageId: number; displayModuleId: number | null; entryIds: number[] }>();
+        for (const it of items) {
+          const entryId = entryIdByKey.get(it.key);
+          if (!entryId) continue;
+          const displayModuleId = typeof it.moduleId === 'number' ? it.moduleId : null;
+          const signature = `${it.pageId}:${displayModuleId ?? 'null'}`;
+          const bucket =
+            groups.get(signature) ?? { pageId: it.pageId, displayModuleId, entryIds: [] };
+          bucket.entryIds.push(entryId);
+          groups.set(signature, bucket);
+        }
+
+        let boundCount = 0;
+        const resolvedModuleIdCache = new Map<string, number>();
+        for (const g of groups.values()) {
+          if (g.entryIds.length === 0) continue;
+          const cacheKey = `${g.pageId}:${g.displayModuleId ?? 'null'}`;
+          const moduleId =
+            resolvedModuleIdCache.get(cacheKey) ??
+            (typeof g.displayModuleId === 'number'
+              ? g.displayModuleId
+              : await getOrCreateRootModuleId(g.pageId));
+          resolvedModuleIdCache.set(cacheKey, moduleId);
+
+          boundCount += await ensureEntryPlacements({ moduleId, entryIds: g.entryIds });
+        }
+
+        const targets = Array.from(groups.values()).map((g) => ({
+          pageId: g.pageId,
+          moduleId: g.displayModuleId
+        }));
+        const uniqueTarget = targets.length === 1 ? targets[0] : null;
+        bind = {
+          mode: 'per_key',
+          scope: effectiveScope,
+          targetsCount: targets.length,
+          pageId: uniqueTarget?.pageId,
+          moduleId: uniqueTarget?.moduleId ?? null,
+          boundCount
+        };
+      }
     }
 
     if (incomingKeys.length) {
@@ -1125,12 +1362,12 @@ export async function importLanguagePackAction(
           markedNeedsUpdateKeys: [],
           pendingReviewKeys: updatedKeys.map((u) => u.key),
           skippedEmptyKeys,
-          bindMode: bind?.mode,
+          bindMode: bind ? (bind.scope === 'new_only' ? 'addedOnly' : 'all') : undefined,
           boundPageId: bind?.pageId,
-          boundModuleId: bind?.moduleId ?? null,
+          boundModuleId: typeof bind?.moduleId === 'number' ? bind.moduleId : null,
           boundCount: bind?.boundCount,
-          createdPageRoute: bindTarget && !('error' in bindTarget) ? bindTarget.createdPageRoute : undefined,
-          createdModuleName: bindTarget && !('error' in bindTarget) ? bindTarget.createdModuleName : undefined
+          createdPageRoute: singleBindTarget && !('error' in singleBindTarget) ? singleBindTarget.createdPageRoute : undefined,
+          createdModuleName: singleBindTarget && !('error' in singleBindTarget) ? singleBindTarget.createdModuleName : undefined
         }
       });
     }

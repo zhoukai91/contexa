@@ -35,7 +35,7 @@ model SystemMeta {
 model User {
   id            Int       @id @default(autoincrement())
   name          String?
-  email         String    @unique
+  account       String    @unique
   passwordHash  String
   role          String    @default("member")
   isSystemAdmin Boolean   @default(false)
@@ -103,7 +103,7 @@ model ActivityLog {
 model Invitation {
   id        Int      @id @default(autoincrement())
   teamId    Int
-  email     String
+  account   String
   role      String
   invitedBy Int
   invitedAt DateTime @default(now())
@@ -133,6 +133,7 @@ model Project {
   pages       Page[]
   locks       TranslationPageLock[]
   packageUploads PackageUpload[]
+  settings    ProjectSetting[]
   createdBy   User?    @relation("ProjectCreatedBy", fields: [createdByUserId], references: [id])
   invitations ProjectInvitation[]
   localePreferences UserProjectLocalePreference[]
@@ -140,6 +141,21 @@ model Project {
   negativePrompts ProjectNegativePrompt[]
 
   @@unique([name])
+}
+
+model ProjectSetting {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  key         String
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, key])
+  @@index([projectId])
 }
 
 model ProjectLocale {
@@ -150,6 +166,11 @@ model ProjectLocale {
   updatedAt DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id])
+  translations Translation[]
+  locks TranslationPageLock[]
+  glossaryTerms ProjectGlossaryTerm[]
+  negativePrompts ProjectNegativePrompt[]
+  packageUploads PackageUpload[]
 
   @@unique([projectId, locale])
   @@index([projectId])
@@ -173,7 +194,7 @@ model ProjectMember {
 model ProjectInvitation {
   id        Int      @id @default(autoincrement())
   projectId Int
-  email     String
+  account   String
   role      String
   canReview Boolean  @default(false)
   invitedBy Int
@@ -184,7 +205,7 @@ model ProjectInvitation {
   project Project @relation(fields: [projectId], references: [id])
   inviter User    @relation("ProjectInvitationInvitedBy", fields: [invitedBy], references: [id])
 
-  @@unique([projectId, email])
+  @@unique([projectId, account])
   @@index([projectId, status])
 }
 
@@ -232,6 +253,7 @@ model Translation {
 
   entry   Entry   @relation(fields: [entryId], references: [id])
   project Project @relation(fields: [projectId], references: [id])
+  projectLocale ProjectLocale @relation(fields: [projectId, locale], references: [projectId, locale])
 
   @@unique([entryId, locale])
   @@index([projectId, locale, status])
@@ -248,7 +270,6 @@ model Page {
 
   project     Project        @relation(fields: [projectId], references: [id])
   modules     Module[]
-  placements  EntryPlacement[]
   locks       TranslationPageLock[]
 
   @@unique([projectId, route])
@@ -264,20 +285,20 @@ model Module {
 
   page       Page            @relation(fields: [pageId], references: [id])
   placements EntryPlacement[]
+
+  @@unique([pageId, name])
 }
 
 model EntryPlacement {
   id       Int  @id @default(autoincrement())
   entryId  Int
-  pageId   Int
-  moduleId Int?
+  moduleId Int
 
   entry  Entry  @relation(fields: [entryId], references: [id])
-  page   Page   @relation(fields: [pageId], references: [id])
-  module Module? @relation(fields: [moduleId], references: [id])
+  module Module @relation(fields: [moduleId], references: [id])
 
-  @@unique([entryId, pageId, moduleId])
-  @@index([pageId])
+  @@unique([entryId, moduleId])
+  @@index([moduleId])
 }
 
 model TranslationPageLock {
@@ -293,8 +314,10 @@ model TranslationPageLock {
   project Project @relation(fields: [projectId], references: [id])
   page    Page    @relation(fields: [pageId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
+  projectLocale ProjectLocale @relation(fields: [projectId, locale], references: [projectId, locale])
 
-  @@index([projectId, pageId, locale])
+  @@unique([projectId, pageId, locale])
+  @@index([userId, expiresAt])
 }
 
 model ProjectGlossaryTerm {
@@ -314,6 +337,7 @@ model ProjectGlossaryTerm {
   project   Project @relation(fields: [projectId], references: [id])
   createdBy User?   @relation("GlossaryTermCreatedBy", fields: [createdByUserId], references: [id])
   updatedBy User?   @relation("GlossaryTermUpdatedBy", fields: [updatedByUserId], references: [id])
+  projectLocale ProjectLocale @relation(fields: [projectId, locale], references: [projectId, locale])
 
   @@unique([projectId, locale, source])
   @@index([projectId, locale])
@@ -336,6 +360,7 @@ model ProjectNegativePrompt {
   project   Project @relation(fields: [projectId], references: [id])
   createdBy User?   @relation("NegativePromptCreatedBy", fields: [createdByUserId], references: [id])
   updatedBy User?   @relation("NegativePromptUpdatedBy", fields: [updatedByUserId], references: [id])
+  projectLocale ProjectLocale @relation(fields: [projectId, locale], references: [projectId, locale])
 
   @@unique([projectId, locale, phrase])
   @@index([projectId, locale])
@@ -361,6 +386,7 @@ model PackageUpload {
 
   project   Project @relation(fields: [projectId], references: [id])
   createdBy User?   @relation(fields: [createdByUserId], references: [id])
+  projectLocale ProjectLocale @relation(fields: [projectId, locale], references: [projectId, locale])
 
   @@index([projectId, createdAt])
   @@index([createdByUserId, createdAt])

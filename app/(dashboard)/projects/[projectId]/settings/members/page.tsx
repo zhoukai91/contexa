@@ -21,7 +21,7 @@ export default async function ProjectSettingsMembersPage({
         role: true,
         canReview: true,
         createdAt: true,
-        user: { select: { email: true, name: true } }
+        user: { select: { account: true, name: true } }
       }
     }),
     prisma.projectInvitation.findMany({
@@ -31,7 +31,7 @@ export default async function ProjectSettingsMembersPage({
     prisma.user.findMany({
       where: { isSystemAdmin: false, deletedAt: null },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, email: true, name: true }
+      select: { id: true, account: true, name: true }
     })
   ] as const);
 
@@ -40,7 +40,7 @@ export default async function ProjectSettingsMembersPage({
       projectId={id}
       members={members.map((m) => ({
         userId: m.userId,
-        email: m.user.email,
+        account: m.user.account,
         name: m.user.name,
         role: m.role,
         canReview: m.canReview,
@@ -48,13 +48,13 @@ export default async function ProjectSettingsMembersPage({
       }))}
       invitations={invitations.map((inv) => ({
         id: inv.id,
-        email: inv.email,
+        account: inv.account,
         role: inv.role,
         canReview: inv.canReview,
         status: inv.status,
         createdAt: new Date(inv.createdAt).toLocaleString(locale, { hour12: false })
       }))}
-      allUsers={users.map((u) => ({ id: u.id, email: u.email, name: u.name }))}
+      allUsers={users.map((u) => ({ id: u.id, account: u.account, name: u.name }))}
     />
   );
 }

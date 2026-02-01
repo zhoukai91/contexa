@@ -8,12 +8,10 @@ import { hashPassword } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 
 const SUPER_ADMIN_ACCOUNTS = new Set(['admin', 'admin@contexa.local']);
-const accountPattern = /^[A-Za-z0-9.@]+$/;
 const passwordSchema = z
   .string()
   .min(6, 'validations.passwordMin')
-  .max(100, 'validations.passwordMax')
-  .regex(accountPattern, 'validations.passwordPattern');
+  .max(100, 'validations.passwordMax');
 
 const promoteSchema = z.object({
   userId: z.coerce.number()
@@ -27,7 +25,7 @@ export const promoteSystemAdmin = validatedActionWithUser(
     if (!user.isSystemAdmin) {
       return { error: t('noPermission') };
     }
-    if (!SUPER_ADMIN_ACCOUNTS.has(user.email)) {
+    if (!SUPER_ADMIN_ACCOUNTS.has(user.account)) {
       return { error: t('onlySuperAdmin') };
     }
 
@@ -43,7 +41,7 @@ export const promoteSystemAdmin = validatedActionWithUser(
       where: {
         deletedAt: null,
         isSystemAdmin: true,
-        email: { notIn: Array.from(SUPER_ADMIN_ACCOUNTS) }
+        account: { notIn: Array.from(SUPER_ADMIN_ACCOUNTS) }
       }
     });
     if (promotedCount >= 5) {
@@ -71,7 +69,7 @@ export const demoteSystemAdmin = validatedActionWithUser(
     if (!user.isSystemAdmin) {
       return { error: t('noPermission') };
     }
-    if (!SUPER_ADMIN_ACCOUNTS.has(user.email)) {
+    if (!SUPER_ADMIN_ACCOUNTS.has(user.account)) {
       return { error: t('onlySuperAdmin') };
     }
 
@@ -82,7 +80,7 @@ export const demoteSystemAdmin = validatedActionWithUser(
     if (!target.isSystemAdmin) {
       return { error: t('notSystemAdmin') };
     }
-    if (SUPER_ADMIN_ACCOUNTS.has(target.email)) {
+    if (SUPER_ADMIN_ACCOUNTS.has(target.account)) {
       return { error: t('cannotDemoteSuperAdmin') };
     }
 

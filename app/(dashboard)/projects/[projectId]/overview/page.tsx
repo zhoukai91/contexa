@@ -4,6 +4,24 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, type TableColumn } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { getProjectOverviewQuery, listProjectOverviewRecentEntriesQuery } from './actions';
+import { DownloadLocaleButton } from './download-locale-button';
+
+function formatDateTime(iso: string) {
+  const ms = Date.parse(iso);
+  const date = Number.isFinite(ms) ? new Date(ms) : new Date();
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
+}
 
 export default async function ProjectOverviewPage({
   params
@@ -14,106 +32,18 @@ export default async function ProjectOverviewPage({
   const id = Number(projectId);
   if (!Number.isFinite(id)) return null;
 
-  const project = {
+  const [overview, recentEntries] = await Promise.all([
+    getProjectOverviewQuery(id),
+    listProjectOverviewRecentEntriesQuery(id, { limit: 10 })
+  ]);
+  if (!overview) return null;
 
-    id,
-    name: '海外电商 App',
-    description: '覆盖首页、购物车、支付与订单中心，当前版本进入多语言发布阶段。',
-    sourceLocale: 'zh-CN',
-    targetLocales: ['en-US', 'ja-JP', 'ko-KR', 'fr-FR', 'de-DE'],
-    totalKeys: 1386
-  };
-  const stats = {
-    globalProgress: 72,
-    pendingReview: 38,
-    missing: 96
-  };
+  const { project, stats, localeStats } = overview;
 
-  const localeStats = [
-    {
-      locale: 'en-US',
-      label: '英语',
-      flag: '��',
-      progress: 100,
-      translated: 1386,
-      missing: 0,
-      review: 0
-    },
-    {
-      locale: 'ja-JP',
-      label: '日语',
-      flag: '��',
-      progress: 74,
-      translated: 1026,
-      missing: 220,
-      review: 40
-    },
-    {
-      locale: 'ko-KR',
-      label: '韩语',
-      flag: '��',
-      progress: 36,
-      translated: 498,
-      missing: 780,
-      review: 24
-    },
-    {
-      locale: 'fr-FR',
-      label: '法语',
-      flag: '��',
-      progress: 88,
-      translated: 1218,
-      missing: 96,
-      review: 24
-    },
-    {
-      locale: 'de-DE',
-      label: '德语',
-      flag: '��',
-      progress: 60,
-      translated: 832,
-      missing: 430,
-      review: 38
-    }
-  ];
-
-  const entryRows = [
-    {
-      key: 'checkout.button.confirm',
-      source: '确认下单',
-      status: '待验收',
-      locale: 'de-DE',
-      updatedAt: '2026-01-28 16:42'
-    },
-    {
-      key: 'profile.empty.title',
-      source: '暂无账号资料',
-      status: '待翻译',
-      locale: 'ko-KR',
-      updatedAt: '2026-01-28 15:20'
-    },
-    {
-      key: 'home.banner.subtitle',
-      source: '满 299 元包邮',
-      status: '已完成',
-      locale: 'fr-FR',
-      updatedAt: '2026-01-28 14:05'
-    },
-    {
-      key: 'settings.security.desc',
-      source: '开启双重验证保障账户安全',
-      status: '待验收',
-      locale: 'ja-JP',
-      updatedAt: '2026-01-28 11:18'
-    },
-    {
-      key: 'order.history.empty',
-      source: '暂无最近订单',
-      status: '已完成',
-      locale: 'en-US',
-      updatedAt: '2026-01-27 19:40'
-    }
-  ];
+  const entryRows = recentEntries.map((row) => ({
+    ...row,
+    updatedAt: formatDateTime(row.updatedAt)
+  }));
 
   const entryColumns: Array<TableColumn<(typeof entryRows)[number]>> = [
     {
@@ -159,6 +89,9 @@ export default async function ProjectOverviewPage({
     }
   ];
 
+  const reviewLink = `/projects/${id}/workbench?statuses=needs_review,ready,needs_update`;
+  const missingLink = `/projects/${id}/workbench?statuses=pending`;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
@@ -181,9 +114,11 @@ export default async function ProjectOverviewPage({
                 项目设置
               </Link>
             </Button>
-            <Button size="sm">
-              <Download className="size-4" />
-              导出全部语言包
+            <Button asChild size="sm">
+              <a href={`/api/projects/${id}/export-all?mode=fallback`}>
+                <Download className="size-4" />
+                导出全部语言包
+              </a>
             </Button>
           </div>
         </div>
@@ -217,11 +152,15 @@ export default async function ProjectOverviewPage({
           <div className="mt-2 space-y-2 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span className="text-foreground">待验收</span>
-              <span className="text-warning">{stats.pendingReview}</span>
+              <Link href={reviewLink} className="text-warning hover:underline">
+                {stats.pendingReview}
+              </Link>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-foreground">待翻译</span>
-              <span className="text-destructive">{stats.missing}</span>
+              <Link href={missingLink} className="text-destructive hover:underline">
+                {stats.missing}
+              </Link>
             </div>
           </div>
         </div>
@@ -232,17 +171,21 @@ export default async function ProjectOverviewPage({
         description={<span className="text-sm">频繁录入与同步入口</span>}
         contentClassName="flex flex-wrap gap-3"
       >
-        <Button size="sm">
-          <Upload className="size-4" />
-          上传源文件
+        <Button asChild size="sm">
+          <Link href={`/projects/${id}/packages?tab=import`}>
+            <Upload className="size-4" />
+            上传源文件
+          </Link>
         </Button>
-        <Button size="sm" variant="outline">
-          <FileDown className="size-4" />
-          导入译文
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/projects/${id}/packages?tab=import`}>
+            <FileDown className="size-4" />
+            导入译文
+          </Link>
         </Button>
-        <Button size="sm" variant="outline">
+        <Button size="sm" variant="outline" disabled>
           <RefreshCcw className="size-4" />
-          从代码仓同步
+          从代码仓同步（待接入）
         </Button>
       </Card>
 
@@ -261,12 +204,18 @@ export default async function ProjectOverviewPage({
                 ? 'text-destructive'
                 : 'text-info';
 
+          const workbenchStatuses =
+            item.missingCount > 0
+              ? 'pending,needs_update,needs_review'
+              : item.reviewCount > 0
+                ? 'needs_review,ready,needs_update'
+                : 'approved';
+
           return (
             <div key={item.locale} className="rounded-lg border border-border bg-background p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <span>{item.flag}</span>
                     <span>{item.label}</span>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">{item.locale}</div>
@@ -282,16 +231,16 @@ export default async function ProjectOverviewPage({
                 />
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>已翻译 {item.translated}</span>
-                <span>待验收 {item.review}</span>
-                <span>待翻译 {item.missing}</span>
+                <span>已翻译 {item.translatedCount}</span>
+                <span>待验收 {item.reviewCount}</span>
+                <span>待翻译 {item.missingCount}</span>
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Button size="sm" variant="outline">
-                  下载
-                </Button>
-                <Button size="sm" variant={item.progress < 100 ? 'default' : 'outline'}>
-                  {item.progress < 100 ? '翻译' : '验收'}
+                <DownloadLocaleButton projectId={id} locale={item.locale} />
+                <Button asChild size="sm" variant={item.progress < 100 ? 'default' : 'outline'}>
+                  <Link href={`/projects/${id}/workbench?locale=${encodeURIComponent(item.locale)}&statuses=${encodeURIComponent(workbenchStatuses)}`}>
+                    {item.progress < 100 ? '翻译' : '验收'}
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -340,7 +289,12 @@ export default async function ProjectOverviewPage({
             </Button>
           </div>
         </div>
-        <Table columns={entryColumns} data={entryRows} rowKey="key" className="rounded-lg border border-border" />
+        <Table
+          columns={entryColumns}
+          data={entryRows}
+          rowKey={(row, index) => `${row.key}:${row.locale}:${index}`}
+          className="rounded-lg border border-border"
+        />
       </Card>
     </div>
   );

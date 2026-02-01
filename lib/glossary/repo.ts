@@ -58,8 +58,8 @@ export type GlossaryAiConstraints = {
   negativePrompts: Array<{ phrase: string; alternative: string }>;
 };
 
-function toUserLabel(user: { name: string | null; email: string } | null) {
-  return user?.name?.trim() ? user.name.trim() : user?.email ?? '—';
+function toUserLabel(user: { name: string | null; account: string } | null) {
+  return user?.name?.trim() ? user.name.trim() : user?.account ?? '—';
 }
 
 export async function listGlossaryTerms(db: any, input: GlossaryListParams) {
@@ -88,7 +88,7 @@ export async function listGlossaryTerms(db: any, input: GlossaryListParams) {
       orderBy: { updatedAt: 'desc' },
       skip,
       take: pageSize,
-      include: { updatedBy: { select: { name: true, email: true } } }
+      include: { updatedBy: { select: { name: true, account: true } } }
     }),
     db.projectGlossaryTerm.count({ where })
   ]);
@@ -135,7 +135,7 @@ export async function listNegativePrompts(db: any, input: NegativePromptListPara
       orderBy: { updatedAt: 'desc' },
       skip,
       take: pageSize,
-      include: { updatedBy: { select: { name: true, email: true } } }
+      include: { updatedBy: { select: { name: true, account: true } } }
     }),
     db.projectNegativePrompt.count({ where })
   ]);
@@ -176,4 +176,3 @@ export async function getGlossaryAiConstraints(db: any, input: { projectId: numb
     negativePrompts: negatives.map((n: any) => ({ phrase: n.phrase, alternative: n.alternative ?? '' }))
   } satisfies GlossaryAiConstraints;
 }
-

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import path from 'node:path';
+import { rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import dotenv from 'dotenv';
 import { SignJWT } from 'jose';
@@ -54,11 +57,17 @@ async function run() {
   const port = 3100 + Math.floor(Math.random() * 100);
   const baseUrl = `http://localhost:${port}`;
 
+  const pnpmCommand = process.env.npm_execpath ? 'node' : (process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm');
+  const pnpmArgsPrefix = process.env.npm_execpath ? [process.env.npm_execpath] : [];
+  const cwd = fileURLToPath(new URL('../', import.meta.url));
+
+  await rm(path.join(cwd, '.next/dev/lock'), { force: true }).catch(() => null);
+
   const server = spawn(
-    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
-    ['dev', '--port', String(port)],
+    pnpmCommand,
+    [...pnpmArgsPrefix, 'dev', '--port', String(port)],
     {
-      cwd: new URL('../', import.meta.url).pathname,
+      cwd,
       env: { ...process.env, PORT: String(port) },
       stdio: ['ignore', 'pipe', 'pipe']
     }
@@ -69,7 +78,7 @@ async function run() {
   server.stderr.on('data', (d) => logs.push(String(d)));
 
   const prisma = new PrismaClient();
-  const email = `test_${crypto.randomUUID().slice(0, 8)}`;
+  const account = `test_${crypto.randomUUID().slice(0, 8)}`;
   const initialPassword = 'oldpass1';
   const newPassword = 'newpass1';
 
@@ -80,7 +89,7 @@ async function run() {
 
     const created = await prisma.user.create({
       data: {
-        email,
+        account,
         name: 'Test',
         passwordHash: await bcryptHash(initialPassword, 10),
         role: 'owner',

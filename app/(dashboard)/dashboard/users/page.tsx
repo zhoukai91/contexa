@@ -18,7 +18,7 @@ export default async function UsersPage() {
 
   const users: Array<{
     id: number;
-    email: string;
+    account: string;
     name: string | null;
     isSystemAdmin: boolean;
     createdAt: Date;
@@ -27,7 +27,7 @@ export default async function UsersPage() {
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
-      email: true,
+      account: true,
       name: true,
       isSystemAdmin: true,
       createdAt: true
@@ -38,11 +38,11 @@ export default async function UsersPage() {
     where: {
       deletedAt: null,
       isSystemAdmin: true,
-      email: { notIn: Array.from(SUPER_ADMIN_ACCOUNTS) }
+      account: { notIn: Array.from(SUPER_ADMIN_ACCOUNTS) }
     }
   });
 
-  const canPromote = SUPER_ADMIN_ACCOUNTS.has(user.email) && promotedCount < 5;
+  const canPromote = SUPER_ADMIN_ACCOUNTS.has(user.account) && promotedCount < 5;
 
   return (
     <div className="space-y-6">
@@ -70,7 +70,7 @@ export default async function UsersPage() {
             <tbody>
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-border last:border-0 align-top">
-                  <td className="py-3 pr-4 font-medium text-foreground">{u.email}</td>
+                  <td className="py-3 pr-4 font-medium text-foreground">{u.account}</td>
                   <td className="py-3 pr-4 text-muted-foreground">{u.name || t('empty')}</td>
                   <td className="py-3 pr-4 text-muted-foreground">
                     {u.isSystemAdmin ? t('yes') : t('no')}
@@ -81,11 +81,11 @@ export default async function UsersPage() {
                   <td className="py-3 pr-4">
                     <UserActionsMenu
                       userId={u.id}
-                      canPromote={canPromote && !u.isSystemAdmin && !SUPER_ADMIN_ACCOUNTS.has(u.email)}
+                      canPromote={canPromote && !u.isSystemAdmin && !SUPER_ADMIN_ACCOUNTS.has(u.account)}
                       canDemote={
-                        SUPER_ADMIN_ACCOUNTS.has(user.email) &&
+                        SUPER_ADMIN_ACCOUNTS.has(user.account) &&
                         u.isSystemAdmin &&
-                        !SUPER_ADMIN_ACCOUNTS.has(u.email)
+                        !SUPER_ADMIN_ACCOUNTS.has(u.account)
                       }
                     />
                   </td>

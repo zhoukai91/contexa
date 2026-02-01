@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
   } catch {}
 
-  const res = NextResponse.json({ ok: true, locale });
+  const res = NextResponse.json({ ok: true, data: { locale } });
   res.cookies.set('NEXT_LOCALE', locale, {
     path: '/',
     sameSite: 'lax',
@@ -20,4 +20,3 @@ export async function POST(request: NextRequest) {
   });
   return res;
 }
-

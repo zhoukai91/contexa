@@ -34,36 +34,50 @@ export const createProject = validatedActionWithUser(
       };
     }
 
+    let created!: { id: number; sourceLocale: string };
     try {
-      const created = await prisma.project.create({
-        data: {
-          name: data.name,
-          description: data.description?.trim() ? data.description.trim() : null,
-          sourceLocale: data.sourceLocale,
-          createdByUserId: user.id,
-          translationAdapter: data.translationAdapter
-        }
-      });
+      created = await prisma.$transaction(async (tx) => {
+        const created = await tx.project.create({
+          data: {
+            name: data.name,
+            description: data.description?.trim()
+              ? data.description.trim()
+              : null,
+            sourceLocale: data.sourceLocale,
+            createdByUserId: user.id,
+            translationAdapter: data.translationAdapter
+          }
+        });
 
-      await prisma.projectLocale.create({
-        data: { projectId: created.id, locale: created.sourceLocale }
-      });
+        await tx.projectLocale.create({
+          data: { projectId: created.id, locale: created.sourceLocale }
+        });
 
-      await prisma.projectMember.create({
-        data: {
-          projectId: created.id,
-          userId: user.id,
-          role: 'admin',
-          canReview: true
-        }
-      });
+        await tx.projectMember.create({
+          data: {
+            projectId: created.id,
+            userId: user.id,
+            role: 'admin',
+            canReview: true
+          }
+        });
 
-      redirect(`/projects/${created.id}`);
-    } catch {
+        return created;
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        return {
+          ...data,
+          error: t('createProjectNameExists')
+        };
+      }
+
       return {
         ...data,
         error: t('createProjectFailed')
       };
     }
+
+    redirect(`/projects/${created.id}`);
   }
 );
